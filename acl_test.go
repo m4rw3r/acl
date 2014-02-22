@@ -23,15 +23,8 @@ func TestAcl(t *testing.T) {
 
 	db := postgresql.CreateConnection(config)
 
-	db.Execf(`DROP TABLE IF EXISTS "ACL_Test";
-
-CREATE TABLE "ACL_Test"
-(
-	"aro_id" uuid NOT NULL,
-	"action" character varying(255) NOT NULL,
-	"resource_id" uuid,
-	PRIMARY KEY ("aro_id", "action", "resource_id")
-);`)
+	err := CreateTable(db, "ACL_Test")
+	util.PanicIf(err)
 
 	testUserAllowed   := idAble{id: "3eb9e0dc-72fa-4e8f-a188-dcca409220f9"}
 	testUserForbidden := idAble{id: "4a567886-2de1-4b0b-9508-5e3125da30f8"}
@@ -46,6 +39,8 @@ CREATE TABLE "ACL_Test"
 	aclWithBypassFalse := NewACLWithBypass(db, "ACL_Test", func(actor Resource, action string, target Resource) bool {
 		return false
 	})
+
+	db.Exec("TRUNCATE \"ACL_Test\";")
 
 	Convey("With an empty database", t, func() {
 		Convey("It should always deny access requests without a bypassFunc", func() {
