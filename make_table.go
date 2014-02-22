@@ -1,6 +1,7 @@
 package acl
 
 import (
+	"database/sql"
 	"strings"
 
 	"github.com/jmoiron/sqlx"
@@ -27,18 +28,23 @@ CREATE RULE "$TABLE_INSERT" AS ON INSERT TO "$TABLE"
 func CreateTable(db *sqlx.DB, name string) error {
 	t := db.MustBegin()
 
-	rows, err := t.Query("SELECT 1 FROM information_schema.tables WHERE table_name = $1", name)
-
+	rows, err := t.Query("SELECT table_name FROM information_schema.tables WHERE table_name = $1", name)
 	if err != nil {
 		t.Rollback()
 
 		return err
 	}
 
-	if ! rows.Next() {
+	row, err := hasRow(rows)
+	if err != nil {
+		t.Rollback()
+
+		return err
+	}
+
+	if ! row {
 		/* No row, insert new table */
 		_, err = t.Exec(strings.Replace(tpl_table, "$TABLE", name, -1))
-
 		if err != nil {
 			t.Rollback()
 
@@ -46,19 +52,23 @@ func CreateTable(db *sqlx.DB, name string) error {
 		}
 	}
 
-	rows, err = t.Query("SELECT 1 FROM pg_rules WHERE rulename = $1", name + "_INSERT")
-	if err != nil { panic(err) }
-
+	rows, err = t.Query("SELECT rulename FROM pg_rules WHERE rulename = $1", name + "_INSERT")
 	if err != nil {
 		t.Rollback()
 
 		return err
 	}
 
-	if ! rows.Next() {
-		/* No row, insert new table */
-		_, err = t.Exec(strings.Replace(tpl_insert_rule, "$TABLE", name, -1))
+	row, err = hasRow(rows)
+	if err != nil {
+		t.Rollback()
 
+		return err
+	}
+
+	if ! row {
+		/* No row, insert new rule */
+		_, err = t.Exec(strings.Replace(tpl_insert_rule, "$TABLE", name, -1))
 		if err != nil {
 			t.Rollback()
 
@@ -66,9 +76,14 @@ func CreateTable(db *sqlx.DB, name string) error {
 		}
 	}
 
-	err = t.Commit()
+	return t.Commit()
+}
 
-	return err
+// hasRow is a utility function which checks if rows has a row and then closes the iteration
+func hasRow(rows *sql.Rows) (bool, error) {
+	hasRow := rows.Next()
+
+	return hasRow, rows.Close()
 }
 
 /* TODO: Needs a way to create cascades for when actors and targets are removed from the database */
