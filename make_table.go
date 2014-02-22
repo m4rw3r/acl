@@ -3,8 +3,6 @@ package acl
 import (
 	"database/sql"
 	"strings"
-
-	"github.com/jmoiron/sqlx"
 )
 
 var tpl_table = `CREATE TABLE "$TABLE"
@@ -25,24 +23,22 @@ CREATE RULE "$TABLE_INSERT" AS ON INSERT TO "$TABLE"
 
 // CreateTable creates the table and rules required to run the ACL,
 // will only create new table and rule if they do not already exist
-func CreateTable(db *sqlx.DB, name string) error {
-	t := db.MustBegin()
+func CreateTable(db *sql.DB, name string) error {
+	t, err := db.Begin()
+	if err != nil {
+		panic(err)
+	}
 
-	rows, err := t.Query("SELECT table_name FROM information_schema.tables WHERE table_name = $1", name)
+	numRows := 0
+	row := t.QueryRow("SELECT COUNT(1) FROM information_schema.tables WHERE table_name = $1", name)
+	err = row.Scan(&numRows)
 	if err != nil {
 		t.Rollback()
 
 		return err
 	}
 
-	row, err := hasRow(rows)
-	if err != nil {
-		t.Rollback()
-
-		return err
-	}
-
-	if !row {
+	if numRows == 0 {
 		/* No row, insert new table */
 		_, err = t.Exec(strings.Replace(tpl_table, "$TABLE", name, -1))
 		if err != nil {
@@ -52,21 +48,16 @@ func CreateTable(db *sqlx.DB, name string) error {
 		}
 	}
 
-	rows, err = t.Query("SELECT rulename FROM pg_rules WHERE rulename = $1", name+"_INSERT")
+	numRows = 0
+	row = t.QueryRow("SELECT COUNT(1) FROM pg_rules WHERE rulename = $1", name+"_INSERT")
+	err = row.Scan(&numRows)
 	if err != nil {
 		t.Rollback()
 
 		return err
 	}
 
-	row, err = hasRow(rows)
-	if err != nil {
-		t.Rollback()
-
-		return err
-	}
-
-	if !row {
+	if numRows == 0 {
 		/* No row, insert new rule */
 		_, err = t.Exec(strings.Replace(tpl_insert_rule, "$TABLE", name, -1))
 		if err != nil {
@@ -78,12 +69,3 @@ func CreateTable(db *sqlx.DB, name string) error {
 
 	return t.Commit()
 }
-
-// hasRow is a utility function which checks if rows has a row and then closes the iteration
-func hasRow(rows *sql.Rows) (bool, error) {
-	hasRow := rows.Next()
-
-	return hasRow, rows.Close()
-}
-
-/* TODO: Needs a way to create cascades for when actors and targets are removed from the database */

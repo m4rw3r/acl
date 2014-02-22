@@ -21,7 +21,8 @@ func (r idAble) GetId() string {
 func TestAcl(t *testing.T) {
 	config := config.LoadConfiguration("../config_test.json")
 
-	db := postgresql.CreateConnection(config)
+	/* Extract normal databse/sql DB instance */
+	db := postgresql.CreateConnection(config).DB
 
 	err := CreateTable(db, "ACL_Test")
 	util.PanicIf(err)

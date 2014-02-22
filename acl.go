@@ -1,7 +1,7 @@
 package acl
 
 import (
-	"github.com/jmoiron/sqlx"
+	"database/sql"
 )
 
 const (
@@ -21,19 +21,15 @@ func (n NilResource) GetId() string {
 	return ""
 }
 
-type allowedBox struct {
-	Allowed bool
-}
-
 // ACL is an object managing permissions for ACO which ARO act upon
 type ACL struct {
 	table      string
-	db         *sqlx.DB
+	db         *sql.DB
 	bypassFunc func(actor Resource, action string, target Resource) bool
 }
 
 // NewACL creates a new ACL instance without any bypassFunc
-func NewACL(db *sqlx.DB, table string) *ACL {
+func NewACL(db *sql.DB, table string) *ACL {
 	service := &ACL{db: db, table: table}
 
 	return service
@@ -42,7 +38,7 @@ func NewACL(db *sqlx.DB, table string) *ACL {
 // NewACLWithBypass creates a new ACL instance with a bypassFunc
 // The bypassFunc can short-circuit access control to allow actions which
 // the ACL otherwise would have disallowed (eg. editing the user's own message)
-func NewACLWithBypass(db *sqlx.DB, table string, bypassFunc func(actor Resource, action string, target Resource) bool) *ACL {
+func NewACLWithBypass(db *sql.DB, table string, bypassFunc func(actor Resource, action string, target Resource) bool) *ACL {
 	service := &ACL{db: db, table: table, bypassFunc: bypassFunc}
 
 	return service
@@ -87,15 +83,17 @@ func (acl *ACL) AllowsAction(actor Resource, action string) (bool, error) {
 		return true, nil
 	}
 
-	allowed := allowedBox{}
-	err := acl.db.Get(&allowed, "SELECT allowed FROM \""+acl.table+"\" WHERE actor_id = $1 AND action = $2 AND target_id = $3 LIMIT 1", actor.GetId(), action, EMPTY_RESOURCE)
+	row := acl.db.QueryRow("SELECT allowed FROM \""+acl.table+"\" WHERE actor_id = $1 AND action = $2 AND target_id = $3 LIMIT 1", actor.GetId(), action, EMPTY_RESOURCE)
+
+	allowed := false
+	err := row.Scan(&allowed)
 
 	/* No rows is not an error, just means no permissions set */
 	if err != nil && err.Error() != "sql: no rows in result set" {
 		return false, err
 	}
 
-	return allowed.Allowed, nil
+	return allowed, nil
 }
 
 // AllowsActionOn returns true if the given ARO is allowed to perform action
@@ -105,13 +103,15 @@ func (acl *ACL) AllowsActionOn(actor Resource, action string, target Resource) (
 		return true, nil
 	}
 
-	allowed := allowedBox{}
-	err := acl.db.Get(&allowed, "SELECT allowed FROM \""+acl.table+"\" WHERE actor_id = $1 AND action = $2 AND (target_id = $3 OR target_id = $4) ORDER BY target_id DESC LIMIT 1", actor.GetId(), action, target.GetId(), EMPTY_RESOURCE)
+	row := acl.db.QueryRow("SELECT allowed FROM \""+acl.table+"\" WHERE actor_id = $1 AND action = $2 AND (target_id = $3 OR target_id = $4) ORDER BY target_id DESC LIMIT 1", actor.GetId(), action, target.GetId(), EMPTY_RESOURCE)
+
+	allowed := false
+	err := row.Scan(&allowed)
 
 	/* No rows is not an error, just means no permissions set */
 	if err != nil && err.Error() != "sql: no rows in result set" {
 		return false, err
 	}
 
-	return allowed.Allowed, nil
+	return allowed, nil
 }
