@@ -42,7 +42,7 @@ func CreateTable(db *sqlx.DB, name string) error {
 		return err
 	}
 
-	if ! row {
+	if !row {
 		/* No row, insert new table */
 		_, err = t.Exec(strings.Replace(tpl_table, "$TABLE", name, -1))
 		if err != nil {
@@ -52,7 +52,7 @@ func CreateTable(db *sqlx.DB, name string) error {
 		}
 	}
 
-	rows, err = t.Query("SELECT rulename FROM pg_rules WHERE rulename = $1", name + "_INSERT")
+	rows, err = t.Query("SELECT rulename FROM pg_rules WHERE rulename = $1", name+"_INSERT")
 	if err != nil {
 		t.Rollback()
 
@@ -66,7 +66,7 @@ func CreateTable(db *sqlx.DB, name string) error {
 		return err
 	}
 
-	if ! row {
+	if !row {
 		/* No row, insert new rule */
 		_, err = t.Exec(strings.Replace(tpl_insert_rule, "$TABLE", name, -1))
 		if err != nil {
