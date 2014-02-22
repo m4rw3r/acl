@@ -24,7 +24,7 @@ func TestAcl(t *testing.T) {
 	/* Extract normal databse/sql DB instance */
 	db := postgresql.CreateConnection(config).DB
 
-	err := CreateTable(db, "ACL_Test", Cascades{})
+	err := EnsureTableAndRulesAreCreated(db, "ACL_Test", Cascades{})
 	util.PanicIf(err)
 
 	testUserAllowed := idAble{id: "3eb9e0dc-72fa-4e8f-a188-dcca409220f9"}

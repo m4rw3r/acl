@@ -24,16 +24,16 @@ func TestMakeTable(t *testing.T) {
 	clean(db)
 
 	Convey("When the database is empty", t, func() {
-		Convey("CreateTable() should not raise an error without links", func() {
-			err := CreateTable(db, "ACLTest", Cascades{})
+		Convey("EnsureTableAndRulesAreCreated() should not raise an error without links", func() {
+			err := EnsureTableAndRulesAreCreated(db, "ACLTest", Cascades{})
 
 			So(err, ShouldEqual, nil)
 
 			clean(db)
 		})
 
-		Convey("CreateTable() should raise an error with links to other tables", func() {
-			err := CreateTable(db, "ACLTest", Cascades{Actors: []Link{{Table: "ACLTestActors", Key: "id"}}, Targets: []Link{{Table: "ACLTestTargets", Key: "id"}}})
+		Convey("EnsureTableAndRulesAreCreated() should raise an error with links to other tables", func() {
+			err := EnsureTableAndRulesAreCreated(db, "ACLTest", Cascades{Actors: []Link{{Table: "ACLTestActors", Key: "id"}}, Targets: []Link{{Table: "ACLTestTargets", Key: "id"}}})
 
 			So(err, ShouldNotBeNil)
 
@@ -80,10 +80,10 @@ func TestMakeTable(t *testing.T) {
 	clean(db)
 
 	Convey("When the database contains the required tables", t, func() {
-		Convey("CreateTable() should not raise an error with links", func() {
+		Convey("EnsureTableAndRulesAreCreated() should not raise an error with links", func() {
 			createResourceTables(db)
 
-			err := CreateTable(db, "ACLTest", Cascades{Actors: []Link{{Table: "ACLTestActors", Key: "id"}}, Targets: []Link{{Table: "ACLTestTargets", Key: "id"}}})
+			err := EnsureTableAndRulesAreCreated(db, "ACLTest", Cascades{Actors: []Link{{Table: "ACLTestActors", Key: "id"}}, Targets: []Link{{Table: "ACLTestTargets", Key: "id"}}})
 
 			So(err, ShouldEqual, nil)
 		})
@@ -169,7 +169,7 @@ func TestMakeTable(t *testing.T) {
 	Convey("When linked rows exist", t, func() {
 		clean(db)
 		createResourceTables(db)
-		err := CreateTable(db, "ACLTest", Cascades{Actors: []Link{{Table: "ACLTestActors", Key: "id"}}, Targets: []Link{{Table: "ACLTestTargets", Key: "id"}}})
+		err := EnsureTableAndRulesAreCreated(db, "ACLTest", Cascades{Actors: []Link{{Table: "ACLTestActors", Key: "id"}}, Targets: []Link{{Table: "ACLTestTargets", Key: "id"}}})
 		if err != nil {
 			panic(err)
 		}

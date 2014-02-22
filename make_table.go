@@ -42,9 +42,9 @@ CREATE RULE "$TABLE_TARGET_$TARGET_DELETED" AS ON DELETE TO "$TARGET"
 	DO ALSO DELETE FROM "$TABLE" WHERE target_id = old."$KEY";
 `
 
-// CreateTable creates the table and rules required to run the ACL,
-// will only create new table and rule if they do not already exist
-func CreateTable(db *sql.DB, name string, cascades Cascades) error {
+// EnsureTableAndRulesAreCreated checks if the table and rules required to run the ACL exists,
+// if they do not they will be created
+func EnsureTableAndRulesAreCreated(db *sql.DB, name string, cascades Cascades) error {
 	t, err := db.Begin()
 	if err != nil {
 		panic(err)
