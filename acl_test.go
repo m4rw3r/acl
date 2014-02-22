@@ -84,6 +84,58 @@ func TestAcl(t *testing.T) {
 		})
 	})
 
+	Convey("When a bypassFunc is set", t, func() {
+		Convey("The bypassFunc should receive the actor, action and NilResource on AllowsAction()", func() {
+			testActor := Resource(&idAble{id:"a"})
+			testAction := ""
+			testTarget := Resource(&idAble{id:"b"})
+
+			dummyActor := Resource(&idAble{id:"c"})
+
+			aclWithFunc := NewACLWithBypass(db, "ACL_Test", func(actor Resource, action string, target Resource) bool {
+				testActor = actor
+				testAction = action
+				testTarget = target
+
+				return true
+			})
+
+			allowed, err := aclWithFunc.AllowsAction(dummyActor, "testString")
+
+			So(err, ShouldBeNil)
+			So(allowed, ShouldEqual, true)
+			So(testActor, ShouldEqual, dummyActor)
+			So(testAction, ShouldEqual, "testString")
+			So(testTarget, ShouldHaveSameTypeAs, &NilResource{})
+			So(testTarget.GetId(), ShouldEqual, "")
+		})
+
+		Convey("The bypassFunc should receive the actor, action and target on AllowsActionOn()", func() {
+			testActor := Resource(&idAble{id:"a"})
+			testAction := ""
+			testTarget := Resource(&idAble{id:"b"})
+
+			dummyActor := Resource(&idAble{id:"c"})
+			dummyTarget := Resource(&idAble{id:"c"})
+
+			aclWithFunc := NewACLWithBypass(db, "ACL_Test", func(actor Resource, action string, target Resource) bool {
+				testActor = actor
+				testAction = action
+				testTarget = target
+
+				return true
+			})
+
+			allowed, err := aclWithFunc.AllowsActionOn(dummyActor, "testString", dummyTarget)
+
+			So(err, ShouldBeNil)
+			So(allowed, ShouldEqual, true)
+			So(testActor, ShouldEqual, dummyActor)
+			So(testAction, ShouldEqual, "testString")
+			So(testTarget, ShouldEqual, dummyTarget)
+		})
+	})
+
 	db.Exec("TRUNCATE \"ACL_Test\";")
 
 	Convey("When SetActionAllowed() is set to true", t, func() {
