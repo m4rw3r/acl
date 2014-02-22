@@ -305,7 +305,153 @@ func TestAcl(t *testing.T) {
 		})
 	})
 
+	db.Exec("TRUNCATE \"ACL_Test\";")
+
+	Convey("When unsetting SetActionAllowed(true)", t, func() {
+		acl.SetActionAllowed(testUserAllowed, "test", true)
+		acl.UnsetActionAllowed(testUserAllowed, "test")
+
+		Convey("AllowsAction()   should return false after unset", func() {
+			acl.UnsetActionAllowed(testUserAllowed, "test")
+
+			allowed, err := acl.AllowsAction(testUserAllowed, "test")
+			util.PanicIf(err)
+			So(allowed, ShouldEqual, false)
+		})
+
+		Convey("AllowsActionOn() should return false after unset", func() {
+
+			allowed, err := acl.AllowsActionOn(testUserAllowed, "test", testResourceA)
+			util.PanicIf(err)
+			So(allowed, ShouldEqual, false)
+		})
+	})
+
+	db.Exec("TRUNCATE \"ACL_Test\";")
+
+	Convey("When unsetting SetActionAllowed(false)", t, func() {
+		acl.SetActionAllowed(testUserAllowed, "test", false)
+		acl.UnsetActionAllowed(testUserAllowed, "test")
+
+		Convey("AllowsAction()   should return false after unset", func() {
+			acl.UnsetActionAllowed(testUserAllowed, "test")
+
+			allowed, err := acl.AllowsAction(testUserAllowed, "test")
+			util.PanicIf(err)
+			So(allowed, ShouldEqual, false)
+		})
+
+		Convey("AllowsActionOn() should return false after unset", func() {
+
+			allowed, err := acl.AllowsActionOn(testUserAllowed, "test", testResourceA)
+			util.PanicIf(err)
+			So(allowed, ShouldEqual, false)
+		})
+	})
+
+	db.Exec("TRUNCATE \"ACL_Test\";")
+
+	Convey("When unsetting SetActionAllowedOn(true)", t, func() {
+		acl.SetActionAllowedOn(testUserAllowed, "test", testResourceA, true)
+		acl.UnsetActionAllowedOn(testUserAllowed, "test", testResourceA)
+
+		Convey("AllowsAction()   should return false after unset", func() {
+			acl.UnsetActionAllowed(testUserAllowed, "test")
+
+			allowed, err := acl.AllowsAction(testUserAllowed, "test")
+			util.PanicIf(err)
+			So(allowed, ShouldEqual, false)
+		})
+
+		Convey("AllowsActionOn() should return false after unset", func() {
+
+			allowed, err := acl.AllowsActionOn(testUserAllowed, "test", testResourceA)
+			util.PanicIf(err)
+			So(allowed, ShouldEqual, false)
+		})
+	})
+
+	db.Exec("TRUNCATE \"ACL_Test\";")
+
+	Convey("When unsetting SetActionAllowedOn(false)", t, func() {
+		acl.SetActionAllowedOn(testUserAllowed, "test", testResourceA, false)
+		acl.UnsetActionAllowedOn(testUserAllowed, "test", testResourceA)
+
+		Convey("AllowsAction()   should return false after unset", func() {
+			acl.UnsetActionAllowed(testUserAllowed, "test")
+
+			allowed, err := acl.AllowsAction(testUserAllowed, "test")
+			util.PanicIf(err)
+			So(allowed, ShouldEqual, false)
+		})
+
+		Convey("AllowsActionOn() should return false after unset", func() {
+
+			allowed, err := acl.AllowsActionOn(testUserAllowed, "test", testResourceA)
+			util.PanicIf(err)
+			So(allowed, ShouldEqual, false)
+		})
+	})
+
+	db.Exec("TRUNCATE \"ACL_Test\";")
+
+	Convey("When unsetting SetActionAllowed(true) having SetActionAllowedOn(true)", t, func() {
+		acl.SetActionAllowed(testUserAllowed, "test", true)
+		acl.SetActionAllowedOn(testUserAllowed, "test", testResourceA, true)
+		acl.UnsetActionAllowed(testUserAllowed, "test")
+
+		Convey("AllowsAction()   should return false after unset", func() {
+			allowed, err := acl.AllowsAction(testUserAllowed, "test")
+			util.PanicIf(err)
+			So(allowed, ShouldEqual, false)
+		})
+
+		Convey("AllowsActionOn() should return true  after unset", func() {
+			allowed, err := acl.AllowsActionOn(testUserAllowed, "test", testResourceA)
+			util.PanicIf(err)
+			So(allowed, ShouldEqual, true)
+		})
+	})
+
+	db.Exec("TRUNCATE \"ACL_Test\";")
+
+	Convey("When unsetting SetActionAllowedOn(false) having SetActionAllowed(true)", t, func() {
+		acl.SetActionAllowed(testUserAllowed, "test", true)
+		acl.SetActionAllowedOn(testUserAllowed, "test", testResourceA, false)
+		acl.UnsetActionAllowedOn(testUserAllowed, "test", testResourceA)
+
+		Convey("AllowsAction()   should return false after unset", func() {
+			allowed, err := acl.AllowsAction(testUserAllowed, "test")
+			util.PanicIf(err)
+			So(allowed, ShouldEqual, true)
+		})
+
+		Convey("AllowsActionOn() should return true  after unset", func() {
+			allowed, err := acl.AllowsActionOn(testUserAllowed, "test", testResourceA)
+			util.PanicIf(err)
+			So(allowed, ShouldEqual, true)
+		})
+	})
+
+	db.Exec("TRUNCATE \"ACL_Test\";")
+
+	Convey("When unsetting SetActionAllowedOn(true) having SetActionAllowed(false)", t, func() {
+		acl.SetActionAllowed(testUserAllowed, "test", false)
+		acl.SetActionAllowedOn(testUserAllowed, "test", testResourceA, false)
+		acl.UnsetActionAllowedOn(testUserAllowed, "test", testResourceA)
+
+		Convey("AllowsAction()   should return false after unset", func() {
+			allowed, err := acl.AllowsAction(testUserAllowed, "test")
+			util.PanicIf(err)
+			So(allowed, ShouldEqual, false)
+		})
+
+		Convey("AllowsActionOn() should return true  after unset", func() {
+			allowed, err := acl.AllowsActionOn(testUserAllowed, "test", testResourceA)
+			util.PanicIf(err)
+			So(allowed, ShouldEqual, false)
+		})
+	})
+
 	/* TODO: Tests for ARO hierarchy */
-	/* TODO: Tests to make sure that SetActionAllowed(), SetActionAllowedOn(), UnsetActionAllowed() and UnsetActionAllowedOn() actually write their changes when used in combination */
-	/* TODO: Tests for UnsetActionAllowed() and UnsetActionAllowedOn() */
 }
