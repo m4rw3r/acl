@@ -235,6 +235,26 @@ func TestMakeTable(t *testing.T) {
 			So(action, ShouldEqual, "testing")
 			So(target_id, ShouldEqual, uuid4)
 			So(allowed, ShouldEqual, false)
+
+			Convey("Should also delete original row", func() {
+				row := db.QueryRow(`SELECT COUNT(1) FROM "ACLTestActors" WHERE "id" = $1`, uuid1)
+
+				numRows := 0
+				err := row.Scan(&numRows)
+
+				So(err, ShouldBeNil)
+				So(numRows, ShouldEqual, 0)
+			})
+
+			Convey("Should preserve other rows", func() {
+				row := db.QueryRow(`SELECT COUNT(1) FROM "ACLTestActors" WHERE "id" = $1`, uuid3)
+
+				numRows := 0
+				err := row.Scan(&numRows)
+
+				So(err, ShouldBeNil)
+				So(numRows, ShouldEqual, 1)
+			})
 		})
 
 		Convey("DELETE on a target row should remove the corresponding ACL entry", func() {
@@ -271,6 +291,26 @@ func TestMakeTable(t *testing.T) {
 			So(action, ShouldEqual, "testing")
 			So(target_id, ShouldEqual, uuid2)
 			So(allowed, ShouldEqual, true)
+
+			Convey("Should also delete original row", func() {
+				row := db.QueryRow(`SELECT COUNT(1) FROM "ACLTestTargets" WHERE "id" = $1`, uuid4)
+
+				numRows := 0
+				err := row.Scan(&numRows)
+
+				So(err, ShouldBeNil)
+				So(numRows, ShouldEqual, 0)
+			})
+
+			Convey("Should also preserve other rows", func() {
+				row := db.QueryRow(`SELECT COUNT(1) FROM "ACLTestTargets" WHERE "id" = $1`, uuid2)
+
+				numRows := 0
+				err := row.Scan(&numRows)
+
+				So(err, ShouldBeNil)
+				So(numRows, ShouldEqual, 1)
+			})
 		})
 	})
 }
