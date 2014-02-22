@@ -40,6 +40,12 @@ CREATE TABLE "ACL_Test"
 	// testResourceB := idAble{id: "98a66485-7c49-4f71-ad3c-6db457d54335"}
 
 	acl := NewACL(db, "ACL_Test")
+	aclWithBypassTrue := NewACLWithBypass(db, "ACL_Test", func(actor Resource, action string, target Resource) bool {
+		return true
+	})
+	aclWithBypassFalse := NewACLWithBypass(db, "ACL_Test", func(actor Resource, action string, target Resource) bool {
+		return false
+	})
 
 	Convey("With an empty database", t, func() {
 		Convey("It should always deny access requests without a bypassFunc", func() {
@@ -60,32 +66,251 @@ CREATE TABLE "ACL_Test"
 			So(allowed, ShouldEqual, false)
 		})
 
-		Convey("It should always deny access requests when the bypassFunc false", func() {
-			aclWithBypass := NewACLWithBypass(db, "ACL_Test", func(actor Resource, action string, target Resource) bool {
-				return false
-			})
+		Convey("It should always deny access requests with bypassFunc giving false", func() {
 
-			allowed, err := aclWithBypass.AllowsAction(testUserAllowed, "test")
+			allowed, err := aclWithBypassFalse.AllowsAction(testUserAllowed, "test")
 			util.PanicIf(err)
 			So(allowed, ShouldEqual, false)
 
-			allowed, err = aclWithBypass.AllowsActionOn(testUserAllowed, "test", testResourceA)
+			allowed, err = aclWithBypassFalse.AllowsActionOn(testUserAllowed, "test", testResourceA)
 			util.PanicIf(err)
 			So(allowed, ShouldEqual, false)
 		})
 
-		Convey("It should always allow access requests when the bypassFunc returns true", func() {
-			aclWithBypass := NewACLWithBypass(db, "ACL_Test", func(actor Resource, action string, target Resource) bool {
-				return true
-			})
-
-			allowed, err := aclWithBypass.AllowsAction(testUserAllowed, "test")
+		Convey("It should always allow access requests with bypassFunc giving true", func() {
+			allowed, err := aclWithBypassTrue.AllowsAction(testUserAllowed, "test")
 			util.PanicIf(err)
 			So(allowed, ShouldEqual, true)
 
-			allowed, err = aclWithBypass.AllowsActionOn(testUserAllowed, "test", testResourceA)
+			allowed, err = aclWithBypassTrue.AllowsActionOn(testUserAllowed, "test", testResourceA)
 			util.PanicIf(err)
 			So(allowed, ShouldEqual, true)
 		})
 	})
+
+	db.Exec("TRUNCATE \"ACL_Test\";")
+
+	Convey("When SetActionAllowed() is set to true", t, func() {
+		acl.SetActionAllowed(testUserAllowed, "test", true);
+
+		Convey("AllowsAction()   should return true", func() {
+			allowed, err := acl.AllowsAction(testUserAllowed, "test")
+			util.PanicIf(err)
+			So(allowed, ShouldEqual, true)
+		})
+
+		Convey("AllowsActionOn() should return true", func() {
+			allowed, err := acl.AllowsActionOn(testUserAllowed, "test", testResourceA)
+			util.PanicIf(err)
+			So(allowed, ShouldEqual, true)
+		})
+
+		aclWithBypassFalse.SetActionAllowed(testUserAllowed, "test", true);
+
+		Convey("AllowsAction()   should return true with bypassFunc giving false", func() {
+			allowed, err := aclWithBypassFalse.AllowsAction(testUserAllowed, "test")
+			util.PanicIf(err)
+			So(allowed, ShouldEqual, true)
+		})
+
+		Convey("AllowsActionOn() should return true with bypassFunc giving false", func() {
+			allowed, err := aclWithBypassFalse.AllowsActionOn(testUserAllowed, "test", testResourceA)
+			util.PanicIf(err)
+			So(allowed, ShouldEqual, true)
+		})
+	})
+
+	db.Exec("TRUNCATE \"ACL_Test\";")
+
+	Convey("When SetActionAllowedOn() is set to true", t, func() {
+		acl.SetActionAllowedOn(testUserAllowed, "test", testResourceA, true);
+
+		Convey("AllowsActionOn() should return true", func() {
+			allowed, err := acl.AllowsActionOn(testUserAllowed, "test", testResourceA)
+			util.PanicIf(err)
+			So(allowed, ShouldEqual, true)
+		})
+
+		Convey("AllowsAction()   should return false", func() {
+			allowed, err := acl.AllowsAction(testUserAllowed, "test")
+			util.PanicIf(err)
+			So(allowed, ShouldEqual, false)
+		})
+
+		aclWithBypassFalse.SetActionAllowedOn(testUserAllowed, "test", testResourceA, true);
+
+		Convey("AllowsActionOn() should return true  with bypassFunc giving false", func() {
+			allowed, err := aclWithBypassFalse.AllowsActionOn(testUserAllowed, "test", testResourceA)
+			util.PanicIf(err)
+			So(allowed, ShouldEqual, true)
+		})
+
+		Convey("AllowsAction()   should return false with bypassFunc giving false", func() {
+			allowed, err := aclWithBypassFalse.AllowsAction(testUserAllowed, "test")
+			util.PanicIf(err)
+			So(allowed, ShouldEqual, false)
+		})
+
+		aclWithBypassTrue.SetActionAllowedOn(testUserAllowed, "test", testResourceA, true);
+
+		Convey("AllowsActionOn() should return true  with bypassFunc giving true", func() {
+			allowed, err := aclWithBypassTrue.AllowsActionOn(testUserAllowed, "test", testResourceA)
+			util.PanicIf(err)
+			So(allowed, ShouldEqual, true)
+		})
+
+		Convey("AllowsAction()   should return true  with bypassFunc giving true", func() {
+			allowed, err := aclWithBypassTrue.AllowsAction(testUserAllowed, "test")
+			util.PanicIf(err)
+			So(allowed, ShouldEqual, true)
+		})
+	})
+
+	db.Exec("TRUNCATE \"ACL_Test\";")
+
+	Convey("When SetActionAllowed() is set to false", t, func() {
+		acl.SetActionAllowed(testUserAllowed, "test", true);
+
+		Convey("AllowsAction()   should return false", func() {
+			allowed, err := acl.AllowsAction(testUserAllowed, "test")
+			util.PanicIf(err)
+			So(allowed, ShouldEqual, false)
+		})
+
+		Convey("AllowsActionOn() should return false", func() {
+			allowed, err := acl.AllowsActionOn(testUserAllowed, "test", testResourceA)
+			util.PanicIf(err)
+			So(allowed, ShouldEqual, false)
+		})
+
+		aclWithBypassFalse.SetActionAllowed(testUserAllowed, "test", false);
+
+		Convey("AllowsAction()   should return false with bypassFunc giving false", func() {
+			allowed, err := aclWithBypassFalse.AllowsAction(testUserAllowed, "test")
+			util.PanicIf(err)
+			So(allowed, ShouldEqual, false)
+		})
+
+		Convey("AllowsActionOn() should return false with bypassFunc giving false", func() {
+			allowed, err := aclWithBypassFalse.AllowsActionOn(testUserAllowed, "test", testResourceA)
+			util.PanicIf(err)
+			So(allowed, ShouldEqual, false)
+		})
+
+		aclWithBypassTrue.SetActionAllowed(testUserAllowed, "test", false);
+
+		Convey("AllowsAction()   should return true  with bypassFunc giving true", func() {
+			allowed, err := aclWithBypassTrue.AllowsAction(testUserAllowed, "test")
+			util.PanicIf(err)
+			So(allowed, ShouldEqual, true)
+		})
+
+		Convey("AllowsActionOn() should return true  with bypassFunc giving true", func() {
+			allowed, err := aclWithBypassTrue.AllowsActionOn(testUserAllowed, "test", testResourceA)
+			util.PanicIf(err)
+			So(allowed, ShouldEqual, true)
+		})
+	})
+
+	db.Exec("TRUNCATE \"ACL_Test\";")
+
+	Convey("When SetActionAllowed() is set to true and SetActionAllowedOn() is set to false", t, func() {
+		acl.SetActionAllowed(testUserAllowed, "test", true)
+		acl.SetActionAllowedOn(testUserAllowed, "test", testResourceA, false)
+
+		Convey("AllowsAction()   should return true", func() {
+			allowed, err := acl.AllowsAction(testUserAllowed, "test")
+			util.PanicIf(err)
+			So(allowed, ShouldEqual, true)
+		})
+
+		Convey("AllowsActionOn() should return false", func() {
+			allowed, err := acl.AllowsActionOn(testUserAllowed, "test", testResourceA)
+			util.PanicIf(err)
+			So(allowed, ShouldEqual, false)
+		})
+
+		aclWithBypassFalse.SetActionAllowed(testUserAllowed, "test", true);
+		aclWithBypassFalse.SetActionAllowedOn(testUserAllowed, "test", testResourceA, false);
+
+		Convey("AllowsAction()   should return true  with bypassFunc giving false", func() {
+			allowed, err := aclWithBypassFalse.AllowsAction(testUserAllowed, "test")
+			util.PanicIf(err)
+			So(allowed, ShouldEqual, true)
+		})
+
+		Convey("AllowsActionOn() should return false with bypassFunc giving false", func() {
+			allowed, err := aclWithBypassFalse.AllowsActionOn(testUserAllowed, "test", testResourceA)
+			util.PanicIf(err)
+			So(allowed, ShouldEqual, false)
+		})
+
+		aclWithBypassFalse.SetActionAllowed(testUserAllowed, "test", true);
+		aclWithBypassFalse.SetActionAllowedOn(testUserAllowed, "test", testResourceA, false);
+
+		Convey("AllowsAction()   should return true  with bypassFunc giving true", func() {
+			allowed, err := aclWithBypassTrue.AllowsAction(testUserAllowed, "test")
+			util.PanicIf(err)
+			So(allowed, ShouldEqual, true)
+		})
+
+		Convey("AllowsActionOn() should return true  with bypassFunc giving true", func() {
+			allowed, err := aclWithBypassTrue.AllowsActionOn(testUserAllowed, "test", testResourceA)
+			util.PanicIf(err)
+			So(allowed, ShouldEqual, true)
+		})
+	})
+
+	db.Exec("TRUNCATE \"ACL_Test\";")
+
+	Convey("When SetActionAllowed() is set to false and SetActionAllowedOn() is set to true", t, func() {
+		acl.SetActionAllowed(testUserAllowed, "test", false)
+		acl.SetActionAllowedOn(testUserAllowed, "test", testResourceA, true)
+
+		Convey("AllowsAction()   should return false", func() {
+			allowed, err := acl.AllowsAction(testUserAllowed, "test")
+			util.PanicIf(err)
+			So(allowed, ShouldEqual, false)
+		})
+
+		Convey("AllowsActionOn() should return true", func() {
+			allowed, err := acl.AllowsActionOn(testUserAllowed, "test", testResourceA)
+			util.PanicIf(err)
+			So(allowed, ShouldEqual, true)
+		})
+
+		aclWithBypassFalse.SetActionAllowed(testUserAllowed, "test", false);
+		aclWithBypassFalse.SetActionAllowedOn(testUserAllowed, "test", testResourceA, true);
+
+		Convey("AllowsAction()   should return false with bypassFunc giving false", func() {
+			allowed, err := aclWithBypassFalse.AllowsAction(testUserAllowed, "test")
+			util.PanicIf(err)
+			So(allowed, ShouldEqual, false)
+		})
+
+		Convey("AllowsActionOn() should return true  with bypassFunc giving false", func() {
+			allowed, err := aclWithBypassFalse.AllowsActionOn(testUserAllowed, "test", testResourceA)
+			util.PanicIf(err)
+			So(allowed, ShouldEqual, true)
+		})
+
+		aclWithBypassFalse.SetActionAllowed(testUserAllowed, "test", false);
+		aclWithBypassFalse.SetActionAllowedOn(testUserAllowed, "test", testResourceA, true);
+
+		Convey("AllowsAction()   should return true  with bypassFunc giving true", func() {
+			allowed, err := aclWithBypassTrue.AllowsAction(testUserAllowed, "test")
+			util.PanicIf(err)
+			So(allowed, ShouldEqual, true)
+		})
+
+		Convey("AllowsActionOn() should return true  with bypassFunc giving true", func() {
+			allowed, err := aclWithBypassTrue.AllowsActionOn(testUserAllowed, "test", testResourceA)
+			util.PanicIf(err)
+			So(allowed, ShouldEqual, true)
+		})
+	})
+
+	/* TODO: Tests for ARO hierarchy */
+	/* TODO: Tests to make sure that SetActionAllowed(), SetActionAllowedOn(), UnsetActionAllowed() and UnsetActionAllowedOn() actually write their changes when used in combination */
+	/* TODO: Tests for UnsetActionAllowed() and UnsetActionAllowedOn() */
 }
