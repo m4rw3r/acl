@@ -11,7 +11,7 @@ var tpl_table = `CREATE TABLE "$TABLE"
 (
 	"actor_id" uuid NOT NULL,
 	"action" character varying(255) NOT NULL,
-	"target_id" uuid DEFAULT '138fcc81-dcf5-4595-8d0d-9e104b491372',
+	"target_id" uuid DEFAULT '00000000-0000-0000-0000-000000000000',
 	"allowed" bool NOT NULL,
 	PRIMARY KEY ("actor_id", "action", "target_id")
 );
