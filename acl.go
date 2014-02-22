@@ -4,6 +4,10 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
+const (
+	EMPTY_RESOURCE = "138fcc81-dcf5-4595-8d0d-9e104b491372"
+)
+
 // Resource represents an object requesting to perform an action or an object acted upon
 type Resource interface {
 	GetId() string
@@ -42,34 +46,33 @@ func NewACLWithBypass(db *sqlx.DB, table string, bypassFunc func(actor Resource,
 
 // SetActionAllowed stores in the ACL if the Access Request Object is allowed to
 // perform the given action or not
-func (acl *ACL) SetActionAllowed(actor Resource, action string, allowed bool) (error) {
+func (acl *ACL) SetActionAllowed(actor Resource, action string, allowed bool) error {
+	_, err := acl.DB.Exec("INSERT INTO \"" + acl.table + "\" (actor_id, action, target_id, allowed) VALUES($1, $2, $3, $4)", actor.GetId(), action, EMPTY_RESOURCE, allowed)
 
-	// TODO: Code and SQL
-
-	return nil
+	return err
 }
 
 // UnsetActionAllowed removes access setting for the user and action, if any
-func (acl *ACL) UnsetActionAllowed(actor Resource, action string) (error) {
+func (acl *ACL) UnsetActionAllowed(actor Resource, action string) error {
+	_, err := acl.DB.Exec("DELETE FROM \"" + acl.table + "\" WHERE actor_id = $1, action = $2, target_id = $3", actor.GetId(), action, EMPTY_RESOURCE)
 
-	// TODO: Code and SQL
-
-	return nil
+	return err
 }
 
 // SetActionAllowedOn stores in the ACL if the Access Request Object is allowed to
 // perform the given action on a specific Access Control Object or not
-func (acl *ACL) SetActionAllowedOn(actor Resource, action string, target Resource, allowed bool) (error) {
+func (acl *ACL) SetActionAllowedOn(actor Resource, action string, target Resource, allowed bool) error {
+	_, err := acl.DB.Exec("INSERT INTO \"" + acl.table + "\" (actor_id, action, target_id, allowed) VALUES($1, $2, $3, $4)", actor.GetId(), action, target.GetId(), allowed)
 
-	// TODO: Code and SQL
-
-	return nil
+	return err
 }
 
 // UnsetActionAllowed removes access setting for the ARO and action on the
 // specific ACO, if any setting is present
-func (acl *ACL) UnsetActionAllowedOn(actor Resource, action string, target Resource) (error) {
-	return nil
+func (acl *ACL) UnsetActionAllowedOn(actor Resource, action string, target Resource) error {
+	_, err := acl.DB.Exec("DELETE FROM \"" + acl.table + "\" WHERE actor_id = $1, action = $2, target_id = $3", actor.GetId(), action, target.GetId())
+
+	return err
 }
 
 // AllowsAction returns true if the given ARO is allowed to perform action
