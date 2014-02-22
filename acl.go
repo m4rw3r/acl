@@ -2,54 +2,97 @@ package acl
 
 import (
 	"github.com/jmoiron/sqlx"
-
-	"lab.likipe.se/worktaim-api/user"
 )
 
-type ACOResource interface {
+// Resource represents an object requesting to perform an action or an object acted upon
+type Resource interface {
 	GetId() string
 }
 
-type NilACOResource struct {}
+// NilResource is an empty Resource, always returning empty string for id
+type NilResource struct {}
 
-func (n NilACOResource) GetId() string {
+// GetId is a dummy function which always returns empty string
+func (n NilResource) GetId() string {
 	return ""
 }
 
-type ACLService struct {
+// ACL is an object managing permissions for ACO which ARO act upon
+type ACL struct {
 	table string
 	DB *sqlx.DB
-	bypassFunc func(user *user.User, action string, resource ACOResource) bool
+	bypassFunc func(actor Resource, action string, target Resource) bool
 }
 
-func NewACL(db *sqlx.DB, table string) *ACLService {
-	service := ACLService{DB: db, table: table}
+// NewACL creates a new ACL instance without any bypassFunc
+func NewACL(db *sqlx.DB, table string) *ACL {
+	service := &ACL{DB: db, table: table}
 
-	return &service
+	return service
 }
 
-func NewACLWithBypass(db *sqlx.DB, table string, bypassFunc func(user *user.User, action string, resource ACOResource) bool) *ACLService {
-	service := ACLService{DB: db, table: table, bypassFunc: bypassFunc}
+// NewACLWithBypass creates a new ACL instance with a bypassFunc
+// The bypassFunc can short-circuit access control to allow actions which
+// the ACL otherwise would have disallowed (eg. editing the user's own message)
+func NewACLWithBypass(db *sqlx.DB, table string, bypassFunc func(actor Resource, action string, target Resource) bool) *ACL {
+	service := &ACL{DB: db, table: table, bypassFunc: bypassFunc}
 
-	return &service
+	return service
 }
 
-func (acl *ACLService) AllowsAction(user *user.User, action string) (bool, error) {
-	resource := NilACOResource{}
+// SetActionAllowed stores in the ACL if the Access Request Object is allowed to
+// perform the given action or not
+func (acl *ACL) SetActionAllowed(actor Resource, action string, allowed bool) (error) {
 
-	if acl.bypassFunc != nil && acl.bypassFunc(user, action, resource) {
+	// TODO: Code and SQL
+
+	return nil
+}
+
+// UnsetActionAllowed removes access setting for the user and action, if any
+func (acl *ACL) UnsetActionAllowed(actor Resource, action string) (error) {
+
+	// TODO: Code and SQL
+
+	return nil
+}
+
+// SetActionAllowedOn stores in the ACL if the Access Request Object is allowed to
+// perform the given action on a specific Access Control Object or not
+func (acl *ACL) SetActionAllowedOn(actor Resource, action string, target Resource, allowed bool) (error) {
+
+	// TODO: Code and SQL
+
+	return nil
+}
+
+// UnsetActionAllowed removes access setting for the ARO and action on the
+// specific ACO, if any setting is present
+func (acl *ACL) UnsetActionAllowedOn(actor Resource, action string, target Resource) (error) {
+	return nil
+}
+
+// AllowsAction returns true if the given ARO is allowed to perform action
+func (acl *ACL) AllowsAction(actor Resource, action string) (bool, error) {
+	target := &NilResource{}
+
+	if acl.bypassFunc != nil && acl.bypassFunc(actor, action, target) {
 		return true, nil
 	}
 
+	// TODO: Code and SQL
 
-
-	return true, nil
+	return false, nil
 }
 
-func (acl *ACLService) AllowsAccessToResource(user *user.User, action string, resource *ACOResource) (bool, error) {
-	if acl.bypassFunc != nil && acl.bypassFunc(user, action, *resource) {
+// AllowsActionOn returns true if the given ARO is allowed to perform action
+// on the given ACO
+func (acl *ACL) AllowsActionOn(actor Resource, action string, target Resource) (bool, error) {
+	if acl.bypassFunc != nil && acl.bypassFunc(actor, action, target) {
 		return true, nil
 	}
 
-	return true, nil
+	// TODO: Code and SQL
+
+	return false, nil
 }
