@@ -43,6 +43,24 @@ func TestAcl(t *testing.T) {
 
 	db.Exec("TRUNCATE \"ACL_Test\";")
 
+	Convey("With a missing table", t, func() {
+		aclNoTable := NewACL(db, "ACL_TestDoesNotExist")
+
+		Convey("AllowsAction() should return false and error", func() {
+			allowed, err := aclNoTable.AllowsAction(testUserAllowed, "test")
+
+			So(allowed, ShouldEqual, false)
+			So(err, ShouldNotBeNil)
+		})
+
+		Convey("AllowsActionOn() should return false and error", func() {
+			allowed, err := aclNoTable.AllowsActionOn(testUserAllowed, "test", testResourceA)
+
+			So(allowed, ShouldEqual, false)
+			So(err, ShouldNotBeNil)
+		})
+	})
+
 	Convey("With an empty database", t, func() {
 		Convey("It should always deny access requests without a bypassFunc", func() {
 			allowed, err := acl.AllowsAction(testUserAllowed, "test")
@@ -86,11 +104,11 @@ func TestAcl(t *testing.T) {
 
 	Convey("When a bypassFunc is set", t, func() {
 		Convey("The bypassFunc should receive the actor, action and NilResource on AllowsAction()", func() {
-			testActor := Resource(&idAble{id:"a"})
+			testActor := Resource(&idAble{id: "a"})
 			testAction := ""
-			testTarget := Resource(&idAble{id:"b"})
+			testTarget := Resource(&idAble{id: "b"})
 
-			dummyActor := Resource(&idAble{id:"c"})
+			dummyActor := Resource(&idAble{id: "c"})
 
 			aclWithFunc := NewACLWithBypass(db, "ACL_Test", func(actor Resource, action string, target Resource) bool {
 				testActor = actor
@@ -111,12 +129,12 @@ func TestAcl(t *testing.T) {
 		})
 
 		Convey("The bypassFunc should receive the actor, action and target on AllowsActionOn()", func() {
-			testActor := Resource(&idAble{id:"a"})
+			testActor := Resource(&idAble{id: "a"})
 			testAction := ""
-			testTarget := Resource(&idAble{id:"b"})
+			testTarget := Resource(&idAble{id: "b"})
 
-			dummyActor := Resource(&idAble{id:"c"})
-			dummyTarget := Resource(&idAble{id:"c"})
+			dummyActor := Resource(&idAble{id: "c"})
+			dummyTarget := Resource(&idAble{id: "c"})
 
 			aclWithFunc := NewACLWithBypass(db, "ACL_Test", func(actor Resource, action string, target Resource) bool {
 				testActor = actor
