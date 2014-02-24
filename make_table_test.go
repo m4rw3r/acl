@@ -21,19 +21,61 @@ func TestMakeTable(t *testing.T) {
 	/* Extract normal databse/sql DB instance */
 	db := postgresql.CreateConnection(config).DB
 
-	clean(db)
-
 	Convey("When the database is empty", t, func() {
+		clean(db)
+
 		Convey("EnsureTableAndRulesAreCreated() should not raise an error without links", func() {
 			err := EnsureTableAndRulesAreCreated(db, "ACLTest", Cascades{})
 
 			So(err, ShouldEqual, nil)
-
-			clean(db)
 		})
 
-		Convey("EnsureTableAndRulesAreCreated() should raise an error with links to other tables", func() {
-			err := EnsureTableAndRulesAreCreated(db, "ACLTest", Cascades{Actors: []Link{{Table: "ACLTestActors", Key: "id"}}, Targets: []Link{{Table: "ACLTestTargets", Key: "id"}}})
+		Convey("EnsureTableAndRulesAreCreated() should raise an error with links to missing actor table", func() {
+			err := EnsureTableAndRulesAreCreated(db, "ACLTest", Cascades{Actors: []Link{{Table: "ACLTestActors", Key: "id"}}, Targets: []Link{}})
+
+			So(err, ShouldNotBeNil)
+
+			Convey("And it should have done a rollback", func() {
+				row := db.QueryRow("SELECT 1 FROM information_schema.tables WHERE table_name = $1", "ACLTest")
+
+				hasTable := 0
+				err := row.Scan(&hasTable)
+
+				So(err, ShouldNotBeNil)
+				So(err.Error(), ShouldEqual, "sql: no rows in result set")
+				So(hasTable, ShouldEqual, 0)
+
+				row = db.QueryRow("SELECT 1 FROM pg_rules WHERE tablename = $1 AND rulename = $2", "ACLTest", "ACLTest_INSERT")
+
+				hasTable = 0
+				err = row.Scan(&hasTable)
+
+				So(err, ShouldNotBeNil)
+				So(err.Error(), ShouldEqual, "sql: no rows in result set")
+				So(hasTable, ShouldEqual, 0)
+
+				row = db.QueryRow("SELECT 1 FROM pg_rules WHERE tablename = $1 AND rulename = $2", "ACLTestActors", "ACLTest_ACTOR_ACLTestActors_DELETE")
+
+				hasTable = 0
+				err = row.Scan(&hasTable)
+
+				So(err, ShouldNotBeNil)
+				So(err.Error(), ShouldEqual, "sql: no rows in result set")
+				So(hasTable, ShouldEqual, 0)
+
+				row = db.QueryRow("SELECT 1 FROM pg_rules WHERE tablename = $1 AND rulename = $2", "ACLTestActors", "ACLTest_TARGET_ACLTestTargets_DELETE")
+
+				hasTable = 0
+				err = row.Scan(&hasTable)
+
+				So(err, ShouldNotBeNil)
+				So(err.Error(), ShouldEqual, "sql: no rows in result set")
+				So(hasTable, ShouldEqual, 0)
+			})
+		})
+
+		Convey("EnsureTableAndRulesAreCreated() should raise an error with links to missing target table", func() {
+			err := EnsureTableAndRulesAreCreated(db, "ACLTest", Cascades{Actors: []Link{}, Targets: []Link{{Table: "ACLTestTargets", Key: "id"}}})
 
 			So(err, ShouldNotBeNil)
 
