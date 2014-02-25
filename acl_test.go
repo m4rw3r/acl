@@ -1,13 +1,13 @@
 package acl
 
 import (
+	"database/sql"
 	"testing"
+	"os"
+	"fmt"
 
+	_ "github.com/lib/pq"
 	. "github.com/smartystreets/goconvey/convey"
-
-	"lab.likipe.se/worktaim-api/config"
-	"lab.likipe.se/worktaim-api/postgresql"
-	"lab.likipe.se/worktaim-api/util"
 )
 
 type idAble struct {
@@ -19,19 +19,27 @@ func (r idAble) GetId() string {
 }
 
 func TestAcl(t *testing.T) {
-	config := config.LoadConfiguration("../config_test.json")
+	requiressl := "disable"
 
-	/* Extract normal databse/sql DB instance */
-	db := postgresql.CreateConnection(config).DB
+	if os.Getenv("PGREQUIRESSL") == "1" {
+		requiressl = "require"
+	}
 
-	err := EnsureTableAndRulesAreCreated(db, "ACL_Test", Cascades{})
-	util.PanicIf(err)
+	db, err := sql.Open("postgres", fmt.Sprintf("postgres://%v:%v@%v:%v/%v?sslmode=%v", os.Getenv("PGUSER"), os.Getenv("PGPASSWORD"), os.Getenv("PGHOST"), os.Getenv("PGPORT"), os.Getenv("PGDATABASE"), requiressl))
+
+	if err != nil {
+		panic(err)
+	}
+
+	err = EnsureTableAndRulesAreCreated(db, "ACL_Test", Cascades{})
+	if err != nil {
+		panic(err)
+	}
 
 	testUserAllowed := idAble{id: "3eb9e0dc-72fa-4e8f-a188-dcca409220f9"}
 	testUserForbidden := idAble{id: "4a567886-2de1-4b0b-9508-5e3125da30f8"}
 
 	testResourceA := idAble{id: "e74dc49c-e663-4144-9383-1a09c6c7ddfd"}
-	// testResourceB := idAble{id: "98a66485-7c49-4f71-ad3c-6db457d54335"}
 
 	acl := New(db, "ACL_Test")
 	aclWithBypassTrue := NewWithBypass(db, "ACL_Test", func(actor Resource, action string, target Resource) bool {
@@ -64,40 +72,40 @@ func TestAcl(t *testing.T) {
 	Convey("With an empty database", t, func() {
 		Convey("It should always deny access requests without a bypassFunc", func() {
 			allowed, err := acl.AllowsAction(testUserAllowed, "test")
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, false)
 
 			allowed, err = acl.AllowsActionOn(testUserAllowed, "test", testResourceA)
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, false)
 
 			allowed, err = acl.AllowsAction(testUserForbidden, "test")
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, false)
 
 			allowed, err = acl.AllowsActionOn(testUserForbidden, "test", testResourceA)
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, false)
 		})
 
 		Convey("It should always deny access requests with bypassFunc giving false", func() {
 
 			allowed, err := aclWithBypassFalse.AllowsAction(testUserAllowed, "test")
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, false)
 
 			allowed, err = aclWithBypassFalse.AllowsActionOn(testUserAllowed, "test", testResourceA)
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, false)
 		})
 
 		Convey("It should always allow access requests with bypassFunc giving true", func() {
 			allowed, err := aclWithBypassTrue.AllowsAction(testUserAllowed, "test")
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, true)
 
 			allowed, err = aclWithBypassTrue.AllowsActionOn(testUserAllowed, "test", testResourceA)
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, true)
 		})
 	})
@@ -161,13 +169,13 @@ func TestAcl(t *testing.T) {
 
 		Convey("AllowsAction()   should return true", func() {
 			allowed, err := acl.AllowsAction(testUserAllowed, "test")
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, true)
 		})
 
 		Convey("AllowsActionOn() should return true", func() {
 			allowed, err := acl.AllowsActionOn(testUserAllowed, "test", testResourceA)
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, true)
 		})
 
@@ -175,13 +183,13 @@ func TestAcl(t *testing.T) {
 
 		Convey("AllowsAction()   should return true with bypassFunc giving false", func() {
 			allowed, err := aclWithBypassFalse.AllowsAction(testUserAllowed, "test")
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, true)
 		})
 
 		Convey("AllowsActionOn() should return true with bypassFunc giving false", func() {
 			allowed, err := aclWithBypassFalse.AllowsActionOn(testUserAllowed, "test", testResourceA)
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, true)
 		})
 	})
@@ -193,13 +201,13 @@ func TestAcl(t *testing.T) {
 
 		Convey("AllowsActionOn() should return true", func() {
 			allowed, err := acl.AllowsActionOn(testUserAllowed, "test", testResourceA)
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, true)
 		})
 
 		Convey("AllowsAction()   should return false", func() {
 			allowed, err := acl.AllowsAction(testUserAllowed, "test")
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, false)
 		})
 
@@ -207,13 +215,13 @@ func TestAcl(t *testing.T) {
 
 		Convey("AllowsActionOn() should return true  with bypassFunc giving false", func() {
 			allowed, err := aclWithBypassFalse.AllowsActionOn(testUserAllowed, "test", testResourceA)
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, true)
 		})
 
 		Convey("AllowsAction()   should return false with bypassFunc giving false", func() {
 			allowed, err := aclWithBypassFalse.AllowsAction(testUserAllowed, "test")
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, false)
 		})
 
@@ -221,13 +229,13 @@ func TestAcl(t *testing.T) {
 
 		Convey("AllowsActionOn() should return true  with bypassFunc giving true", func() {
 			allowed, err := aclWithBypassTrue.AllowsActionOn(testUserAllowed, "test", testResourceA)
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, true)
 		})
 
 		Convey("AllowsAction()   should return true  with bypassFunc giving true", func() {
 			allowed, err := aclWithBypassTrue.AllowsAction(testUserAllowed, "test")
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, true)
 		})
 	})
@@ -239,13 +247,13 @@ func TestAcl(t *testing.T) {
 
 		Convey("AllowsAction()   should return false", func() {
 			allowed, err := acl.AllowsAction(testUserAllowed, "test")
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, false)
 		})
 
 		Convey("AllowsActionOn() should return false", func() {
 			allowed, err := acl.AllowsActionOn(testUserAllowed, "test", testResourceA)
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, false)
 		})
 
@@ -253,13 +261,13 @@ func TestAcl(t *testing.T) {
 
 		Convey("AllowsAction()   should return false with bypassFunc giving false", func() {
 			allowed, err := aclWithBypassFalse.AllowsAction(testUserAllowed, "test")
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, false)
 		})
 
 		Convey("AllowsActionOn() should return false with bypassFunc giving false", func() {
 			allowed, err := aclWithBypassFalse.AllowsActionOn(testUserAllowed, "test", testResourceA)
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, false)
 		})
 
@@ -267,13 +275,13 @@ func TestAcl(t *testing.T) {
 
 		Convey("AllowsAction()   should return true  with bypassFunc giving true", func() {
 			allowed, err := aclWithBypassTrue.AllowsAction(testUserAllowed, "test")
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, true)
 		})
 
 		Convey("AllowsActionOn() should return true  with bypassFunc giving true", func() {
 			allowed, err := aclWithBypassTrue.AllowsActionOn(testUserAllowed, "test", testResourceA)
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, true)
 		})
 	})
@@ -286,13 +294,13 @@ func TestAcl(t *testing.T) {
 
 		Convey("AllowsAction()   should return true", func() {
 			allowed, err := acl.AllowsAction(testUserAllowed, "test")
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, true)
 		})
 
 		Convey("AllowsActionOn() should return false", func() {
 			allowed, err := acl.AllowsActionOn(testUserAllowed, "test", testResourceA)
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, false)
 		})
 
@@ -301,13 +309,13 @@ func TestAcl(t *testing.T) {
 
 		Convey("AllowsAction()   should return true  with bypassFunc giving false", func() {
 			allowed, err := aclWithBypassFalse.AllowsAction(testUserAllowed, "test")
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, true)
 		})
 
 		Convey("AllowsActionOn() should return false with bypassFunc giving false", func() {
 			allowed, err := aclWithBypassFalse.AllowsActionOn(testUserAllowed, "test", testResourceA)
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, false)
 		})
 
@@ -316,13 +324,13 @@ func TestAcl(t *testing.T) {
 
 		Convey("AllowsAction()   should return true  with bypassFunc giving true", func() {
 			allowed, err := aclWithBypassTrue.AllowsAction(testUserAllowed, "test")
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, true)
 		})
 
 		Convey("AllowsActionOn() should return true  with bypassFunc giving true", func() {
 			allowed, err := aclWithBypassTrue.AllowsActionOn(testUserAllowed, "test", testResourceA)
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, true)
 		})
 	})
@@ -335,13 +343,13 @@ func TestAcl(t *testing.T) {
 
 		Convey("AllowsAction()   should return false", func() {
 			allowed, err := acl.AllowsAction(testUserAllowed, "test")
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, false)
 		})
 
 		Convey("AllowsActionOn() should return true", func() {
 			allowed, err := acl.AllowsActionOn(testUserAllowed, "test", testResourceA)
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, true)
 		})
 
@@ -350,13 +358,13 @@ func TestAcl(t *testing.T) {
 
 		Convey("AllowsAction()   should return false with bypassFunc giving false", func() {
 			allowed, err := aclWithBypassFalse.AllowsAction(testUserAllowed, "test")
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, false)
 		})
 
 		Convey("AllowsActionOn() should return true  with bypassFunc giving false", func() {
 			allowed, err := aclWithBypassFalse.AllowsActionOn(testUserAllowed, "test", testResourceA)
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, true)
 		})
 
@@ -365,13 +373,13 @@ func TestAcl(t *testing.T) {
 
 		Convey("AllowsAction()   should return true  with bypassFunc giving true", func() {
 			allowed, err := aclWithBypassTrue.AllowsAction(testUserAllowed, "test")
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, true)
 		})
 
 		Convey("AllowsActionOn() should return true  with bypassFunc giving true", func() {
 			allowed, err := aclWithBypassTrue.AllowsActionOn(testUserAllowed, "test", testResourceA)
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, true)
 		})
 	})
@@ -384,13 +392,13 @@ func TestAcl(t *testing.T) {
 
 		Convey("AllowsAction()   should return true", func() {
 			allowed, err := acl.AllowsAction(testUserAllowed, "test")
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, true)
 		})
 
 		Convey("AllowsActionOn() should return true", func() {
 			allowed, err := acl.AllowsActionOn(testUserAllowed, "test", testResourceA)
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, true)
 		})
 	})
@@ -403,13 +411,13 @@ func TestAcl(t *testing.T) {
 
 		Convey("AllowsAction()   should return true", func() {
 			allowed, err := acl.AllowsAction(testUserAllowed, "test")
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, false)
 		})
 
 		Convey("AllowsActionOn() should return true", func() {
 			allowed, err := acl.AllowsActionOn(testUserAllowed, "test", testResourceA)
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, false)
 		})
 	})
@@ -424,14 +432,14 @@ func TestAcl(t *testing.T) {
 			acl.UnsetActionAllowed(testUserAllowed, "test")
 
 			allowed, err := acl.AllowsAction(testUserAllowed, "test")
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, false)
 		})
 
 		Convey("AllowsActionOn() should return true", func() {
 
 			allowed, err := acl.AllowsActionOn(testUserAllowed, "test", testResourceA)
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, true)
 		})
 	})
@@ -444,13 +452,13 @@ func TestAcl(t *testing.T) {
 
 		Convey("AllowsAction()   should return false", func() {
 			allowed, err := acl.AllowsAction(testUserAllowed, "test")
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, false)
 		})
 
 		Convey("AllowsActionOn() should return true", func() {
 			allowed, err := acl.AllowsActionOn(testUserAllowed, "test", testResourceA)
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, false)
 		})
 	})
@@ -463,13 +471,13 @@ func TestAcl(t *testing.T) {
 
 		Convey("AllowsAction()   should return false after unset", func() {
 			allowed, err := acl.AllowsAction(testUserAllowed, "test")
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, false)
 		})
 
 		Convey("AllowsActionOn() should return false after unset", func() {
 			allowed, err := acl.AllowsActionOn(testUserAllowed, "test", testResourceA)
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, false)
 		})
 	})
@@ -482,13 +490,13 @@ func TestAcl(t *testing.T) {
 
 		Convey("AllowsAction()   should return false after unset", func() {
 			allowed, err := acl.AllowsAction(testUserAllowed, "test")
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, false)
 		})
 
 		Convey("AllowsActionOn() should return false after unset", func() {
 			allowed, err := acl.AllowsActionOn(testUserAllowed, "test", testResourceA)
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, false)
 		})
 	})
@@ -501,13 +509,13 @@ func TestAcl(t *testing.T) {
 
 		Convey("AllowsAction()   should return false after unset", func() {
 			allowed, err := acl.AllowsAction(testUserAllowed, "test")
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, false)
 		})
 
 		Convey("AllowsActionOn() should return false after unset", func() {
 			allowed, err := acl.AllowsActionOn(testUserAllowed, "test", testResourceA)
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, false)
 		})
 	})
@@ -520,13 +528,13 @@ func TestAcl(t *testing.T) {
 
 		Convey("AllowsAction()   should return false after unset", func() {
 			allowed, err := acl.AllowsAction(testUserAllowed, "test")
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, false)
 		})
 
 		Convey("AllowsActionOn() should return false after unset", func() {
 			allowed, err := acl.AllowsActionOn(testUserAllowed, "test", testResourceA)
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, false)
 		})
 	})
@@ -540,13 +548,13 @@ func TestAcl(t *testing.T) {
 
 		Convey("AllowsAction()   should return false after unset", func() {
 			allowed, err := acl.AllowsAction(testUserAllowed, "test")
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, false)
 		})
 
 		Convey("AllowsActionOn() should return true  after unset", func() {
 			allowed, err := acl.AllowsActionOn(testUserAllowed, "test", testResourceA)
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, true)
 		})
 	})
@@ -560,13 +568,13 @@ func TestAcl(t *testing.T) {
 
 		Convey("AllowsAction()   should return false after unset", func() {
 			allowed, err := acl.AllowsAction(testUserAllowed, "test")
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, true)
 		})
 
 		Convey("AllowsActionOn() should return true  after unset", func() {
 			allowed, err := acl.AllowsActionOn(testUserAllowed, "test", testResourceA)
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, true)
 		})
 	})
@@ -580,13 +588,13 @@ func TestAcl(t *testing.T) {
 
 		Convey("AllowsAction()   should return false after unset", func() {
 			allowed, err := acl.AllowsAction(testUserAllowed, "test")
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, false)
 		})
 
 		Convey("AllowsActionOn() should return true  after unset", func() {
 			allowed, err := acl.AllowsActionOn(testUserAllowed, "test", testResourceA)
-			util.PanicIf(err)
+			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, false)
 		})
 	})

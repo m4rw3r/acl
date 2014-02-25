@@ -1,12 +1,12 @@
 package acl
 
 import (
+	"os"
+	"fmt"
 	"database/sql"
 	"testing"
 
-	"lab.likipe.se/worktaim-api/config"
-	"lab.likipe.se/worktaim-api/postgresql"
-
+	_ "github.com/lib/pq"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -16,10 +16,17 @@ func TestMakeTable(t *testing.T) {
 	uuid3 := "48e68e18-769e-4d74-a349-a4e530ce0056"
 	uuid4 := "9e72d92b-15f5-4a26-9647-f244b6caf668"
 
-	config := config.LoadConfiguration("../config_test.json")
+	requiressl := "disable"
 
-	/* Extract normal databse/sql DB instance */
-	db := postgresql.CreateConnection(config).DB
+	if os.Getenv("PGREQUIRESSL") == "1" {
+		requiressl = "require"
+	}
+
+	db, err := sql.Open("postgres", fmt.Sprintf("postgres://%v:%v@%v:%v/%v?sslmode=%v", os.Getenv("PGUSER"), os.Getenv("PGPASSWORD"), os.Getenv("PGHOST"), os.Getenv("PGPORT"), os.Getenv("PGDATABASE"), requiressl))
+
+	if err != nil {
+		panic(err)
+	}
 
 	Convey("When the database is empty", t, func() {
 		clean(db)
