@@ -29,7 +29,7 @@ type ACL struct {
 }
 
 // NewACL creates a new ACL instance without any bypassFunc
-func NewACL(db *sql.DB, table string) *ACL {
+func New(db *sql.DB, table string) *ACL {
 	service := &ACL{db: db, table: table}
 
 	return service
@@ -38,7 +38,7 @@ func NewACL(db *sql.DB, table string) *ACL {
 // NewACLWithBypass creates a new ACL instance with a bypassFunc
 // The bypassFunc can short-circuit access control to allow actions which
 // the ACL otherwise would have disallowed (eg. editing the user's own message)
-func NewACLWithBypass(db *sql.DB, table string, bypassFunc func(actor Resource, action string, target Resource) bool) *ACL {
+func NewWithBypass(db *sql.DB, table string, bypassFunc func(actor Resource, action string, target Resource) bool) *ACL {
 	service := &ACL{db: db, table: table, bypassFunc: bypassFunc}
 
 	return service

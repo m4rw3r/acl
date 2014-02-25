@@ -33,18 +33,18 @@ func TestAcl(t *testing.T) {
 	testResourceA := idAble{id: "e74dc49c-e663-4144-9383-1a09c6c7ddfd"}
 	// testResourceB := idAble{id: "98a66485-7c49-4f71-ad3c-6db457d54335"}
 
-	acl := NewACL(db, "ACL_Test")
-	aclWithBypassTrue := NewACLWithBypass(db, "ACL_Test", func(actor Resource, action string, target Resource) bool {
+	acl := New(db, "ACL_Test")
+	aclWithBypassTrue := NewWithBypass(db, "ACL_Test", func(actor Resource, action string, target Resource) bool {
 		return true
 	})
-	aclWithBypassFalse := NewACLWithBypass(db, "ACL_Test", func(actor Resource, action string, target Resource) bool {
+	aclWithBypassFalse := NewWithBypass(db, "ACL_Test", func(actor Resource, action string, target Resource) bool {
 		return false
 	})
 
 	db.Exec("TRUNCATE \"ACL_Test\";")
 
 	Convey("With a missing table", t, func() {
-		aclNoTable := NewACL(db, "ACL_TestDoesNotExist")
+		aclNoTable := New(db, "ACL_TestDoesNotExist")
 
 		Convey("AllowsAction() should return false and error", func() {
 			allowed, err := aclNoTable.AllowsAction(testUserAllowed, "test")
@@ -110,7 +110,7 @@ func TestAcl(t *testing.T) {
 
 			dummyActor := Resource(&idAble{id: "c"})
 
-			aclWithFunc := NewACLWithBypass(db, "ACL_Test", func(actor Resource, action string, target Resource) bool {
+			aclWithFunc := NewWithBypass(db, "ACL_Test", func(actor Resource, action string, target Resource) bool {
 				testActor = actor
 				testAction = action
 				testTarget = target
@@ -136,7 +136,7 @@ func TestAcl(t *testing.T) {
 			dummyActor := Resource(&idAble{id: "c"})
 			dummyTarget := Resource(&idAble{id: "c"})
 
-			aclWithFunc := NewACLWithBypass(db, "ACL_Test", func(actor Resource, action string, target Resource) bool {
+			aclWithFunc := NewWithBypass(db, "ACL_Test", func(actor Resource, action string, target Resource) bool {
 				testActor = actor
 				testAction = action
 				testTarget = target
