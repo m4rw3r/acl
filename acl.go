@@ -24,13 +24,14 @@ func (n NilResource) GetId() string {
 // ACL is an object managing permissions for ACO which ARO act upon
 type ACL struct {
 	table      string
+	treeTable  string
 	db         *sql.DB
 	bypassFunc func(actor Resource, action string, target Resource) bool
 }
 
 // NewACL creates a new ACL instance without any bypassFunc
-func New(db *sql.DB, table string) *ACL {
-	service := &ACL{db: db, table: table}
+func New(db *sql.DB, treeTable string, table string) *ACL {
+	service := &ACL{db: db, treeTable: treeTable, table: table}
 
 	return service
 }
@@ -38,7 +39,7 @@ func New(db *sql.DB, table string) *ACL {
 // NewACLWithBypass creates a new ACL instance with a bypassFunc
 // The bypassFunc can short-circuit access control to allow actions which
 // the ACL otherwise would have disallowed (eg. editing the user's own message)
-func NewWithBypass(db *sql.DB, table string, bypassFunc func(actor Resource, action string, target Resource) bool) *ACL {
+func NewWithBypass(db *sql.DB, treeTable string, table string, bypassFunc func(actor Resource, action string, target Resource) bool) *ACL {
 	service := &ACL{db: db, table: table, bypassFunc: bypassFunc}
 
 	return service
@@ -114,4 +115,57 @@ func (acl *ACL) AllowsActionOn(actor Resource, action string, target Resource) (
 	}
 
 	return allowed, nil
+}
+
+func (acl *ACL) SetActorInherits(actor Resource, parentActor Resource) error {
+	/* Conditional insert, in case we have an exact duplicate row */
+	_, err := acl.db.Exec(`INSERT INTO "`+acl.treeTable+`" ("id", "parent_id") SELECT $1, $2 WHERE NOT EXISTS (SELECT 1 FROM "`+acl.treeTable+`" WHERE "id" = $3 AND "parent_id" = $4)`, actor.GetId(), parentActor.GetId(), actor.GetId(), parentActor.GetId())
+
+	return err
+}
+
+func (acl *ACL) RemoveActorInherits(actor Resource, parentActor Resource) error {
+	_, err := acl.db.Exec(`DELETE FROM "`+acl.treeTable+`" WHERE ("id", "parent_id") = ($1, $2)`, actor.GetId(), parentActor.GetId())
+
+	return err
+}
+
+func (acl *ACL) GetActorInherits(actor Resource) ([]string, error) {
+	rows, err := acl.db.Query(`SELECT "parent_id" FROM "`+acl.treeTable+`" WHERE "id" = $1 ORDER BY "id"`, actor.GetId())
+	if err != nil {
+		return []string{}, err
+	}
+
+	var ret []string
+
+	for rows.Next() {
+		str := ""
+
+		rows.Scan(&str)
+
+		ret = append(ret, str)
+	}
+
+	rows.Close()
+	return ret, err
+}
+
+func (acl *ACL) GetActorChildren(actor Resource) ([]string, error) {
+	rows, err := acl.db.Query(`SELECT "id" FROM "`+acl.treeTable+`" WHERE "parent_id" = $1 ORDER BY "id"`, actor.GetId())
+	if err != nil {
+		return []string{}, err
+	}
+
+	var ret []string
+
+	for rows.Next() {
+		str := ""
+
+		rows.Scan(&str)
+
+		ret = append(ret, str)
+	}
+
+	rows.Close()
+	return ret, err
 }

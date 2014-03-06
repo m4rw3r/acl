@@ -31,28 +31,30 @@ func TestAcl(t *testing.T) {
 		panic(err)
 	}
 
-	err = EnsureTableAndRulesAreCreated(db, "ACL_Test", Cascades{})
+	err = EnsureTablesAndRulesExist(db, "ACL_TestTree", "ACL_Test", Cascades{})
 	if err != nil {
 		panic(err)
 	}
 
 	testUserAllowed := idAble{id: "3eb9e0dc-72fa-4e8f-a188-dcca409220f9"}
 	testUserForbidden := idAble{id: "4a567886-2de1-4b0b-9508-5e3125da30f8"}
+	dummyUser := idAble{id: "7be24c16-6376-478d-91c9-f879116d1d49"}
 
 	testResourceA := idAble{id: "e74dc49c-e663-4144-9383-1a09c6c7ddfd"}
 
-	acl := New(db, "ACL_Test")
-	aclWithBypassTrue := NewWithBypass(db, "ACL_Test", func(actor Resource, action string, target Resource) bool {
+	acl := New(db, "ACL_TestTree", "ACL_Test")
+	aclWithBypassTrue := NewWithBypass(db, "ACL_TestTree", "ACL_Test", func(actor Resource, action string, target Resource) bool {
 		return true
 	})
-	aclWithBypassFalse := NewWithBypass(db, "ACL_Test", func(actor Resource, action string, target Resource) bool {
+	aclWithBypassFalse := NewWithBypass(db, "ACL_TestTree", "ACL_Test", func(actor Resource, action string, target Resource) bool {
 		return false
 	})
 
 	db.Exec("TRUNCATE \"ACL_Test\";")
+	db.Exec("TRUNCATE \"ACL_TestTree\";")
 
 	Convey("With a missing table", t, func() {
-		aclNoTable := New(db, "ACL_TestDoesNotExist")
+		aclNoTable := New(db, "ACL_TestTree", "ACL_TestDoesNotExist")
 
 		Convey("AllowsAction() should return false and error", func() {
 			allowed, err := aclNoTable.AllowsAction(testUserAllowed, "test")
@@ -118,7 +120,7 @@ func TestAcl(t *testing.T) {
 
 			dummyActor := Resource(&idAble{id: "c"})
 
-			aclWithFunc := NewWithBypass(db, "ACL_Test", func(actor Resource, action string, target Resource) bool {
+			aclWithFunc := NewWithBypass(db, "ACL_TestTree", "ACL_Test", func(actor Resource, action string, target Resource) bool {
 				testActor = actor
 				testAction = action
 				testTarget = target
@@ -144,7 +146,7 @@ func TestAcl(t *testing.T) {
 			dummyActor := Resource(&idAble{id: "c"})
 			dummyTarget := Resource(&idAble{id: "c"})
 
-			aclWithFunc := NewWithBypass(db, "ACL_Test", func(actor Resource, action string, target Resource) bool {
+			aclWithFunc := NewWithBypass(db, "ACL_TestTree", "ACL_Test", func(actor Resource, action string, target Resource) bool {
 				testActor = actor
 				testAction = action
 				testTarget = target
@@ -596,6 +598,141 @@ func TestAcl(t *testing.T) {
 			allowed, err := acl.AllowsActionOn(testUserAllowed, "test", testResourceA)
 			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, false)
+		})
+	})
+
+	db.Exec("TRUNCATE \"ACL_Test\";")
+	db.Exec("TRUNCATE \"ACL_TestTree\";")
+
+	Convey("With no hierarchy", t, func() {
+		Convey("GetActorInherits() should return empty array", func() {
+			parents, err := acl.GetActorInherits(testUserAllowed)
+
+			So(err, ShouldBeNil)
+			So(len(parents), ShouldEqual, 0)
+		})
+
+		Convey("GetActorDescendants() should return empty array", func() {
+			children, err := acl.GetActorChildren(testUserForbidden)
+
+			So(err, ShouldBeNil)
+			So(len(children), ShouldEqual, 0)
+		})
+	})
+
+	Convey("When using SetActorInherits() to establish a hierarchy", t, func() {
+		Convey("It should not error when setting a new relation", func() {
+			err := acl.SetActorInherits(testUserAllowed, testUserForbidden)
+
+			So(err, ShouldBeNil)
+		})
+
+		Convey("It should not error when setting an already set relation", func() {
+			err := acl.SetActorInherits(testUserAllowed, testUserForbidden)
+			So(err, ShouldBeNil)
+
+			err = acl.SetActorInherits(testUserAllowed, testUserForbidden)
+			So(err, ShouldBeNil)
+		})
+
+		Convey("GetActorInherits() should display the relation", func() {
+			err := acl.SetActorInherits(testUserAllowed, testUserForbidden)
+			So(err, ShouldBeNil)
+
+			parents, err := acl.GetActorInherits(testUserAllowed)
+
+			So(err, ShouldBeNil)
+			So(parents, ShouldResemble, []string{testUserForbidden.GetId()})
+		})
+
+		Convey("GetActorInherits() shoud display all parents", func() {
+			err := acl.SetActorInherits(testUserAllowed, testUserForbidden)
+			So(err, ShouldBeNil)
+
+			err = acl.SetActorInherits(testUserAllowed, dummyUser)
+			So(err, ShouldBeNil)
+
+			parents, err := acl.GetActorInherits(testUserAllowed)
+
+			So(err, ShouldBeNil)
+			So(parents, ShouldResemble, []string{testUserForbidden.GetId(), dummyUser.GetId()})
+		})
+
+		Convey("GetActorChildren() should display all children", func() {
+			err := acl.SetActorInherits(testUserAllowed, testUserForbidden)
+			So(err, ShouldBeNil)
+
+			err = acl.SetActorInherits(dummyUser, testUserForbidden)
+			So(err, ShouldBeNil)
+
+			children, err := acl.GetActorChildren(testUserForbidden)
+
+			So(err, ShouldBeNil)
+			So(children, ShouldResemble, []string{testUserAllowed.GetId(), dummyUser.GetId()})
+		})
+	})
+
+	Convey("When a hierarchy exists", t, func() {
+		err := acl.SetActorInherits(testUserAllowed, testUserForbidden)
+		So(err, ShouldBeNil)
+
+		err = acl.SetActorInherits(testUserAllowed, dummyUser)
+		So(err, ShouldBeNil)
+
+		err = acl.SetActorInherits(dummyUser, testUserForbidden)
+		So(err, ShouldBeNil)
+
+		Convey("RemoveActorInherits() should remove the relation", func() {
+			children, err := acl.GetActorChildren(testUserForbidden)
+
+			So(err, ShouldBeNil)
+			So(children, ShouldResemble, []string{testUserAllowed.GetId(), dummyUser.GetId()})
+
+			err = acl.RemoveActorInherits(testUserAllowed, testUserForbidden)
+
+			So(err, ShouldBeNil)
+
+			children, err = acl.GetActorChildren(testUserForbidden)
+
+			So(err, ShouldBeNil)
+			So(children, ShouldResemble, []string{dummyUser.GetId()})
+
+			children, err = acl.GetActorChildren(dummyUser)
+
+			So(err, ShouldBeNil)
+			So(children, ShouldResemble, []string{testUserAllowed.GetId()})
+		})
+	})
+
+	db.Exec("TRUNCATE \"ACL_TestTree\";")
+
+	Convey("When a relation exists between A -> B", t, func() {
+		err := acl.SetActorInherits(testUserAllowed, testUserForbidden)
+		So(err, ShouldBeNil)
+
+		Convey("Attempting to establish B -> A should return an error", func() {
+			err := acl.SetActorInherits(testUserForbidden, testUserAllowed)
+			So(err, ShouldNotBeNil)
+
+			Convey("And the relation should not be established", func() {
+				children, err := acl.GetActorInherits(testUserForbidden)
+				So(err, ShouldBeNil)
+				So(children, ShouldNotContain, testUserAllowed.GetId())
+			})
+		})
+
+		Convey("Attempting to establish B -> C -> A should return an error", func() {
+			err := acl.SetActorInherits(testUserForbidden, dummyUser)
+			So(err, ShouldBeNil)
+
+			err = acl.SetActorInherits(dummyUser, testUserAllowed)
+			So(err, ShouldNotBeNil)
+
+			Convey("And the relation should not be established", func() {
+				children, err := acl.GetActorInherits(dummyUser)
+				So(err, ShouldBeNil)
+				So(children, ShouldNotContain, testUserAllowed.GetId())
+			})
 		})
 	})
 

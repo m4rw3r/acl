@@ -10,7 +10,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-func TestMakeTable(t *testing.T) {
+func TestEnsureTablesAndRulesExist(t *testing.T) {
 	uuid1 := "0323663c-5ce7-4a12-a221-79b0159264cb"
 	uuid2 := "1364b583-20a1-4aeb-aad8-cc134daeae00"
 	uuid3 := "48e68e18-769e-4d74-a349-a4e530ce0056"
@@ -32,13 +32,13 @@ func TestMakeTable(t *testing.T) {
 		clean(db)
 
 		Convey("EnsureTableAndRulesAreCreated() should not raise an error without links", func() {
-			err := EnsureTableAndRulesAreCreated(db, "ACLTest", Cascades{})
+			err := EnsureTablesAndRulesExist(db, "ACLTestTree", "ACLTest", Cascades{})
 
 			So(err, ShouldEqual, nil)
 		})
 
 		Convey("EnsureTableAndRulesAreCreated() should raise an error with links to missing actor table", func() {
-			err := EnsureTableAndRulesAreCreated(db, "ACLTest", Cascades{Actors: []Link{{Table: "ACLTestActors", Key: "id"}}, Targets: []Link{}})
+			err := EnsureTablesAndRulesExist(db, "ACLTestTree", "ACLTest", Cascades{Actors: []Link{{Table: "ACLTestActors", Key: "id"}}, Targets: []Link{}})
 
 			So(err, ShouldNotBeNil)
 
@@ -82,7 +82,7 @@ func TestMakeTable(t *testing.T) {
 		})
 
 		Convey("EnsureTableAndRulesAreCreated() should raise an error with links to missing target table", func() {
-			err := EnsureTableAndRulesAreCreated(db, "ACLTest", Cascades{Actors: []Link{}, Targets: []Link{{Table: "ACLTestTargets", Key: "id"}}})
+			err := EnsureTablesAndRulesExist(db, "ACLTestTree", "ACLTest", Cascades{Actors: []Link{}, Targets: []Link{{Table: "ACLTestTargets", Key: "id"}}})
 
 			So(err, ShouldNotBeNil)
 
@@ -132,7 +132,7 @@ func TestMakeTable(t *testing.T) {
 		Convey("EnsureTableAndRulesAreCreated() should not raise an error with links", func() {
 			createResourceTables(db)
 
-			err := EnsureTableAndRulesAreCreated(db, "ACLTest", Cascades{Actors: []Link{{Table: "ACLTestActors", Key: "id"}}, Targets: []Link{{Table: "ACLTestTargets", Key: "id"}}})
+			err := EnsureTablesAndRulesExist(db, "ACLTestTree", "ACLTest", Cascades{Actors: []Link{{Table: "ACLTestActors", Key: "id"}}, Targets: []Link{{Table: "ACLTestTargets", Key: "id"}}})
 
 			So(err, ShouldEqual, nil)
 		})
@@ -218,7 +218,7 @@ func TestMakeTable(t *testing.T) {
 	Convey("When linked rows exist", t, func() {
 		clean(db)
 		createResourceTables(db)
-		err := EnsureTableAndRulesAreCreated(db, "ACLTest", Cascades{Actors: []Link{{Table: "ACLTestActors", Key: "id"}}, Targets: []Link{{Table: "ACLTestTargets", Key: "id"}}})
+		err := EnsureTablesAndRulesExist(db, "ACLTestTree", "ACLTest", Cascades{Actors: []Link{{Table: "ACLTestActors", Key: "id"}}, Targets: []Link{{Table: "ACLTestTargets", Key: "id"}}})
 		if err != nil {
 			panic(err)
 		}
@@ -362,6 +362,9 @@ func TestMakeTable(t *testing.T) {
 			})
 		})
 	})
+
+	/* TODO: Tests to make sure that it does not error if rules already exist */
+	/* TODO: Tests for tree table */
 }
 
 func createResourceTables(db *sql.DB) {
