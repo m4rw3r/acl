@@ -736,5 +736,284 @@ func TestAcl(t *testing.T) {
 		})
 	})
 
-	/* TODO: Tests for ARO hierarchy */
+	db.Exec("TRUNCATE \"ACL_Test\";")
+	db.Exec("TRUNCATE \"ACL_TestTree\";")
+
+	Convey("When A inherits from B", t, func() {
+		err := acl.SetActorInherits(testUserAllowed, testUserForbidden)
+		So(err, ShouldBeNil)
+
+		Convey("SetActionAllowed(true) on B should allow A", func() {
+			err = acl.SetActionAllowed(testUserForbidden, "testing", true)
+			So(err, ShouldBeNil)
+
+			allowed, err := acl.AllowsAction(testUserForbidden, "testing")
+			So(err, ShouldBeNil)
+			So(allowed, ShouldEqual, true)
+
+			allowed, err = acl.AllowsAction(testUserAllowed, "testing")
+			So(err, ShouldBeNil)
+			So(allowed, ShouldEqual, true)
+
+			Convey("And SetActionAllowed(false) on A should disable A", func() {
+				err = acl.SetActionAllowed(testUserAllowed, "testing", false)
+				So(err, ShouldBeNil)
+
+				allowed, err := acl.AllowsAction(testUserForbidden, "testing")
+				So(err, ShouldBeNil)
+				So(allowed, ShouldEqual, true)
+
+				allowed, err = acl.AllowsAction(testUserAllowed, "testing")
+				So(err, ShouldBeNil)
+				So(allowed, ShouldEqual, false)
+			})
+
+			Convey("And SetActionAllowed(true) on A should enable A", func() {
+				err = acl.SetActionAllowed(testUserAllowed, "testing", true)
+				So(err, ShouldBeNil)
+
+				allowed, err := acl.AllowsAction(testUserForbidden, "testing")
+				So(err, ShouldBeNil)
+				So(allowed, ShouldEqual, true)
+
+				allowed, err = acl.AllowsAction(testUserAllowed, "testing")
+				So(err, ShouldBeNil)
+				So(allowed, ShouldEqual, true)
+			})
+		})
+
+		db.Exec("TRUNCATE \"ACL_Test\";")
+
+		Convey("SetActionAllowed(false) on B should disable A", func() {
+			err = acl.SetActionAllowed(testUserForbidden, "testing", false)
+			So(err, ShouldBeNil)
+
+			allowed, err := acl.AllowsAction(testUserForbidden, "testing")
+			So(err, ShouldBeNil)
+			So(allowed, ShouldEqual, false)
+
+			allowed, err = acl.AllowsAction(testUserAllowed, "testing")
+			So(err, ShouldBeNil)
+			So(allowed, ShouldEqual, false)
+
+			Convey("And SetActionAllowed(true) on A should allow A", func() {
+				err = acl.SetActionAllowed(testUserAllowed, "testing", true)
+				So(err, ShouldBeNil)
+
+				allowed, err := acl.AllowsAction(testUserForbidden, "testing")
+				So(err, ShouldBeNil)
+				So(allowed, ShouldEqual, false)
+
+				allowed, err = acl.AllowsAction(testUserAllowed, "testing")
+				So(err, ShouldBeNil)
+				So(allowed, ShouldEqual, true)
+			})
+
+			Convey("And SetActionAllowed(false) on A should still disable A", func() {
+				err = acl.SetActionAllowed(testUserAllowed, "testing", false)
+				So(err, ShouldBeNil)
+
+				allowed, err := acl.AllowsAction(testUserForbidden, "testing")
+				So(err, ShouldBeNil)
+				So(allowed, ShouldEqual, false)
+
+				allowed, err = acl.AllowsAction(testUserAllowed, "testing")
+				So(err, ShouldBeNil)
+				So(allowed, ShouldEqual, false)
+			})
+		})
+
+		db.Exec("TRUNCATE \"ACL_Test\";")
+
+		Convey("SetActionAllowedOn(true) on B should allow A on resource", func() {
+			err = acl.SetActionAllowedOn(testUserForbidden, "testing", testResourceA, true)
+			So(err, ShouldBeNil)
+
+			allowed, err := acl.AllowsActionOn(testUserForbidden, "testing", testResourceA)
+			So(err, ShouldBeNil)
+			So(allowed, ShouldEqual, true)
+
+			allowed, err = acl.AllowsActionOn(testUserAllowed, "testing", testResourceA)
+			So(err, ShouldBeNil)
+			So(allowed, ShouldEqual, true)
+
+			Convey("And SetActionAllowedOn(false) on A should disable A on resource", func() {
+				err = acl.SetActionAllowedOn(testUserAllowed, "testing", testResourceA, false)
+				So(err, ShouldBeNil)
+
+				allowed, err := acl.AllowsActionOn(testUserForbidden, "testing", testResourceA)
+				So(err, ShouldBeNil)
+				So(allowed, ShouldEqual, true)
+
+				allowed, err = acl.AllowsActionOn(testUserAllowed, "testing", testResourceA)
+				So(err, ShouldBeNil)
+				So(allowed, ShouldEqual, false)
+			})
+
+			Convey("And SetActionAllowedOn(true) on A should enable A on resource", func() {
+				err = acl.SetActionAllowedOn(testUserAllowed, "testing", testResourceA, true)
+				So(err, ShouldBeNil)
+
+				allowed, err := acl.AllowsActionOn(testUserForbidden, "testing", testResourceA)
+				So(err, ShouldBeNil)
+				So(allowed, ShouldEqual, true)
+
+				allowed, err = acl.AllowsActionOn(testUserAllowed, "testing", testResourceA)
+				So(err, ShouldBeNil)
+				So(allowed, ShouldEqual, true)
+			})
+		})
+
+		db.Exec("TRUNCATE \"ACL_Test\";")
+
+		Convey("SetActionAllowedOn(false) on B should disable A on resource", func() {
+			err = acl.SetActionAllowedOn(testUserForbidden, "testing", testResourceA, false)
+			So(err, ShouldBeNil)
+
+			allowed, err := acl.AllowsActionOn(testUserForbidden, "testing", testResourceA)
+			So(err, ShouldBeNil)
+			So(allowed, ShouldEqual, false)
+
+			allowed, err = acl.AllowsActionOn(testUserAllowed, "testing", testResourceA)
+			So(err, ShouldBeNil)
+			So(allowed, ShouldEqual, false)
+
+			Convey("And SetActionAllowedOn(false) on A should still disable A on resource", func() {
+				err = acl.SetActionAllowedOn(testUserAllowed, "testing", testResourceA, false)
+				So(err, ShouldBeNil)
+
+				allowed, err := acl.AllowsActionOn(testUserForbidden, "testing", testResourceA)
+				So(err, ShouldBeNil)
+				So(allowed, ShouldEqual, false)
+
+				allowed, err = acl.AllowsActionOn(testUserAllowed, "testing", testResourceA)
+				So(err, ShouldBeNil)
+				So(allowed, ShouldEqual, false)
+			})
+
+			Convey("And SetActionAllowedOn(true) on A should enable A on resource", func() {
+				err = acl.SetActionAllowedOn(testUserAllowed, "testing", testResourceA, true)
+				So(err, ShouldBeNil)
+
+				allowed, err := acl.AllowsActionOn(testUserForbidden, "testing", testResourceA)
+				So(err, ShouldBeNil)
+				So(allowed, ShouldEqual, false)
+
+				allowed, err = acl.AllowsActionOn(testUserAllowed, "testing", testResourceA)
+				So(err, ShouldBeNil)
+				So(allowed, ShouldEqual, true)
+			})
+		})
+
+		db.Exec("TRUNCATE \"ACL_Test\";")
+
+		Convey("SetActionAllowedOn(true) on B should allow A on resource", func() {
+			err = acl.SetActionAllowedOn(testUserForbidden, "testing", testResourceA, true)
+			So(err, ShouldBeNil)
+
+			allowed, err := acl.AllowsActionOn(testUserForbidden, "testing", testResourceA)
+			So(err, ShouldBeNil)
+			So(allowed, ShouldEqual, true)
+
+			allowed, err = acl.AllowsActionOn(testUserAllowed, "testing", testResourceA)
+			So(err, ShouldBeNil)
+			So(allowed, ShouldEqual, true)
+
+			Convey("And SetActionAllowed(false) on A should disable A on resource", func() {
+				err = acl.SetActionAllowed(testUserAllowed, "testing", false)
+				So(err, ShouldBeNil)
+
+				allowed, err := acl.AllowsActionOn(testUserForbidden, "testing", testResourceA)
+				So(err, ShouldBeNil)
+				So(allowed, ShouldEqual, true)
+
+				allowed, err = acl.AllowsActionOn(testUserAllowed, "testing", testResourceA)
+				So(err, ShouldBeNil)
+				So(allowed, ShouldEqual, false)
+			})
+
+			Convey("And SetActionAllowed(true) on A should still enable A on resource", func() {
+				err = acl.SetActionAllowed(testUserAllowed, "testing",  true)
+				So(err, ShouldBeNil)
+
+				allowed, err := acl.AllowsActionOn(testUserForbidden, "testing", testResourceA)
+				So(err, ShouldBeNil)
+				So(allowed, ShouldEqual, true)
+
+				allowed, err = acl.AllowsActionOn(testUserAllowed, "testing", testResourceA)
+				So(err, ShouldBeNil)
+				So(allowed, ShouldEqual, true)
+			})
+		})
+	})
+
+	db.Exec("TRUNCATE \"ACL_Test\";")
+	db.Exec("TRUNCATE \"ACL_TestTree\";")
+
+	Convey("When A inherits from B and C", t, func() {
+		err := acl.SetActorInherits(testUserAllowed, testUserForbidden)
+		So(err, ShouldBeNil)
+
+		err = acl.SetActorInherits(testUserAllowed, dummyUser)
+		So(err, ShouldBeNil)
+
+		Convey("SetActionAllowed(true) on only B should allow A", func() {
+			err := acl.SetActionAllowed(testUserForbidden, "testing", true)
+			So(err, ShouldBeNil)
+
+			allowed, err := acl.AllowsAction(testUserForbidden, "testing")
+			So(err, ShouldBeNil)
+			So(allowed, ShouldEqual, true)
+
+			allowed, err = acl.AllowsAction(testUserAllowed, "testing")
+			So(err, ShouldBeNil)
+			So(allowed, ShouldEqual, true)
+		})
+
+		db.Exec("TRUNCATE \"ACL_Test\";")
+
+		Convey("SetActionAllowed(true) on both B and C should allow A", func() {
+			err := acl.SetActionAllowed(testUserForbidden, "testing", true)
+			So(err, ShouldBeNil)
+
+			err = acl.SetActionAllowed(dummyUser, "testing", true)
+			So(err, ShouldBeNil)
+
+			allowed, err := acl.AllowsAction(testUserForbidden, "testing")
+			So(err, ShouldBeNil)
+			So(allowed, ShouldEqual, true)
+
+			allowed, err = acl.AllowsAction(dummyUser, "testing")
+			So(err, ShouldBeNil)
+			So(allowed, ShouldEqual, true)
+
+			allowed, err = acl.AllowsAction(testUserAllowed, "testing")
+			So(err, ShouldBeNil)
+			So(allowed, ShouldEqual, true)
+		})
+
+		db.Exec("TRUNCATE \"ACL_Test\";")
+
+		Convey("SetActionAllowed(true) on B and SetActionAllowed(false) on C should disable A", func() {
+			err := acl.SetActionAllowed(testUserForbidden, "testing", true)
+			So(err, ShouldBeNil)
+
+			err = acl.SetActionAllowed(dummyUser, "testing", false)
+			So(err, ShouldBeNil)
+
+			allowed, err := acl.AllowsAction(testUserForbidden, "testing")
+			So(err, ShouldBeNil)
+			So(allowed, ShouldEqual, true)
+
+			allowed, err = acl.AllowsAction(dummyUser, "testing")
+			So(err, ShouldBeNil)
+			So(allowed, ShouldEqual, false)
+
+			allowed, err = acl.AllowsAction(testUserAllowed, "testing")
+			So(err, ShouldBeNil)
+			So(allowed, ShouldEqual, false)
+		})
+	})
+
+	/* TODO: More for ARO hierarchy, combine levels with generic and resource specific permissions */
 }

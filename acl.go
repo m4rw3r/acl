@@ -40,7 +40,7 @@ func New(db *sql.DB, treeTable string, table string) *ACL {
 // The bypassFunc can short-circuit access control to allow actions which
 // the ACL otherwise would have disallowed (eg. editing the user's own message)
 func NewWithBypass(db *sql.DB, treeTable string, table string, bypassFunc func(actor Resource, action string, target Resource) bool) *ACL {
-	service := &ACL{db: db, table: table, bypassFunc: bypassFunc}
+	service := &ACL{db: db, treeTable: treeTable, table: table, bypassFunc: bypassFunc}
 
 	return service
 }
@@ -84,7 +84,27 @@ func (acl *ACL) AllowsAction(actor Resource, action string) (bool, error) {
 		return true, nil
 	}
 
-	row := acl.db.QueryRow("SELECT allowed FROM \""+acl.table+"\" WHERE actor_id = $1 AND action = $2 AND target_id = $3 LIMIT 1", actor.GetId(), action, EMPTY_RESOURCE)
+	row := acl.db.QueryRow(`WITH RECURSIVE q AS (
+	SELECT "parent_id", ARRAY["id"] path, 1 "level"
+	FROM "`+acl.treeTable+`"
+	WHERE "id" = $1
+UNION ALL
+	SELECT t."parent_id", q."path" || t."id", q."level" + 1
+	FROM q
+	JOIN "`+acl.treeTable+`" t ON t."id" = q."parent_id"
+	WHERE NOT t."id" = ANY(q."path")
+)
+SELECT a."allowed"
+FROM (
+	SELECT $1 AS "id", 0 "level"
+UNION ALL
+	SELECT q."parent_id" AS "id", q."level"
+	FROM q
+) h
+JOIN "`+acl.table+`" a ON a."actor_id" = h.id
+WHERE a."action" = $2 AND a."target_id" = $3
+ORDER BY h."level" ASC, a."allowed" ASC
+LIMIT 1`, actor.GetId(), action, EMPTY_RESOURCE)
 
 	allowed := false
 	err := row.Scan(&allowed)
@@ -104,7 +124,27 @@ func (acl *ACL) AllowsActionOn(actor Resource, action string, target Resource) (
 		return true, nil
 	}
 
-	row := acl.db.QueryRow("SELECT allowed FROM \""+acl.table+"\" WHERE actor_id = $1 AND action = $2 AND (target_id = $3 OR target_id = $4) ORDER BY target_id DESC LIMIT 1", actor.GetId(), action, target.GetId(), EMPTY_RESOURCE)
+	row := acl.db.QueryRow(`WITH RECURSIVE q AS (
+	SELECT "parent_id", ARRAY["id"] path, 1 "level"
+	FROM "`+acl.treeTable+`"
+	WHERE "id" = $1
+UNION ALL
+	SELECT t."parent_id", q."path" || t."id", q."level" + 1
+	FROM q
+	JOIN "`+acl.treeTable+`" t ON t."id" = q."parent_id"
+	WHERE NOT t."id" = ANY(q."path")
+)
+SELECT a."allowed"
+FROM (
+	SELECT $1 AS "id", 0 "level"
+UNION ALL
+	SELECT q."parent_id" AS "id", q."level"
+	FROM q
+) h
+JOIN "`+acl.table+`" a ON a."actor_id" = h.id
+WHERE a."action" = $2 AND (a."target_id" = $3 OR target_id = $4)
+ORDER BY h."level" ASC, a."target_id" DESC, a."allowed" ASC
+LIMIT 1`, actor.GetId(), action, target.GetId(), EMPTY_RESOURCE)
 
 	allowed := false
 	err := row.Scan(&allowed)
