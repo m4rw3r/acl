@@ -21,6 +21,13 @@ func (n NilResource) GetId() string {
 	return ""
 }
 
+// ActionAuthorizer is an interface which contains the methods to test authorization,
+// useful for providing test-stubs instead of a full ACL-implementation
+type ActionAuthorizer interface {
+	AllowsAction(actor Resource, action string) (bool, error)
+	AllowsActionOn(actor Resource, action string, target Resource) (bool, error)
+}
+
 // ACL is an object managing permissions for ACO which ARO act upon
 type ACL struct {
 	table      string
