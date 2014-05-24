@@ -92,7 +92,7 @@ func (acl *ACL) AllowsAction(actor Resource, action string) (bool, error) {
 	}
 
 	row := acl.db.QueryRow(`WITH RECURSIVE q AS (
-	SELECT "parent_id", ARRAY["id"] path, 1 "level"
+	SELECT "parent_id", ARRAY["id"] "path", 1 "level"
 	FROM "`+acl.treeTable+`"
 	WHERE "id" = $1
 UNION ALL
@@ -132,7 +132,7 @@ func (acl *ACL) AllowsActionOn(actor Resource, action string, target Resource) (
 	}
 
 	row := acl.db.QueryRow(`WITH RECURSIVE q AS (
-	SELECT "parent_id", ARRAY["id"] path, 1 "level"
+	SELECT "parent_id", ARRAY["id"] "path", 1 "level"
 	FROM "`+acl.treeTable+`"
 	WHERE "id" = $1
 UNION ALL
