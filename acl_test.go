@@ -22,6 +22,8 @@ func WithTransaction(db *sql.DB, f func(tx *sql.Tx)) func() {
 	return func() {
 		tx, err := db.Begin()
 		So(err, ShouldBeNil)
+
+		/* Clear tables used in tests */
 		_, err = tx.Exec("TRUNCATE \"ACL_Test\";")
 		So(err, ShouldBeNil)
 		_, err = tx.Exec("TRUNCATE \"ACL_TestTree\";")
@@ -41,6 +43,12 @@ func WithTransaction(db *sql.DB, f func(tx *sql.Tx)) func() {
 func WithTransactionExpectFail(db *sql.DB, f func(tx *sql.Tx)) func() {
 	return func() {
 		tx, err := db.Begin()
+		So(err, ShouldBeNil)
+
+		/* Clear tables used in tests */
+		_, err = tx.Exec("TRUNCATE \"ACL_Test\";")
+		So(err, ShouldBeNil)
+		_, err = tx.Exec("TRUNCATE \"ACL_TestTree\";")
 		So(err, ShouldBeNil)
 
 		Reset(func() {
