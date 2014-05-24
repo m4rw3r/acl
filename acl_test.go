@@ -220,8 +220,6 @@ func TestAcl(t *testing.T) {
 			So(allowed, ShouldEqual, true)
 		})
 
-		aclWithBypassFalse.SetActionAllowed(tx, testUserAllowed, "test", true)
-
 		Convey("AllowsAction()   should return true with bypassFunc giving false", func() {
 			allowed, err := aclWithBypassFalse.AllowsAction(tx, testUserAllowed, "test")
 			So(err, ShouldBeNil)
@@ -250,8 +248,6 @@ func TestAcl(t *testing.T) {
 			So(allowed, ShouldEqual, false)
 		})
 
-		aclWithBypassFalse.SetActionAllowedOn(tx, testUserAllowed, "test", testResourceA, true)
-
 		Convey("AllowsActionOn() should return true  with bypassFunc giving false", func() {
 			allowed, err := aclWithBypassFalse.AllowsActionOn(tx, testUserAllowed, "test", testResourceA)
 			So(err, ShouldBeNil)
@@ -263,8 +259,6 @@ func TestAcl(t *testing.T) {
 			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, false)
 		})
-
-		aclWithBypassTrue.SetActionAllowedOn(tx, testUserAllowed, "test", testResourceA, true)
 
 		Convey("AllowsActionOn() should return true  with bypassFunc giving true", func() {
 			allowed, err := aclWithBypassTrue.AllowsActionOn(tx, testUserAllowed, "test", testResourceA)
@@ -280,7 +274,7 @@ func TestAcl(t *testing.T) {
 	}))
 
 	Convey("When SetActionAllowed() is set to false", t, WithTransaction(db, func(tx *sql.Tx) {
-		acl.SetActionAllowed(tx, testUserAllowed, "test", true)
+		acl.SetActionAllowed(tx, testUserAllowed, "test", false)
 
 		Convey("AllowsAction()   should return false", func() {
 			allowed, err := acl.AllowsAction(tx, testUserAllowed, "test")
@@ -294,8 +288,6 @@ func TestAcl(t *testing.T) {
 			So(allowed, ShouldEqual, false)
 		})
 
-		aclWithBypassFalse.SetActionAllowed(tx, testUserAllowed, "test", false)
-
 		Convey("AllowsAction()   should return false with bypassFunc giving false", func() {
 			allowed, err := aclWithBypassFalse.AllowsAction(tx, testUserAllowed, "test")
 			So(err, ShouldBeNil)
@@ -307,8 +299,6 @@ func TestAcl(t *testing.T) {
 			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, false)
 		})
-
-		aclWithBypassTrue.SetActionAllowed(tx, testUserAllowed, "test", false)
 
 		Convey("AllowsAction()   should return true  with bypassFunc giving true", func() {
 			allowed, err := aclWithBypassTrue.AllowsAction(tx, testUserAllowed, "test")
@@ -339,9 +329,6 @@ func TestAcl(t *testing.T) {
 			So(allowed, ShouldEqual, false)
 		})
 
-		aclWithBypassFalse.SetActionAllowed(tx, testUserAllowed, "test", true)
-		aclWithBypassFalse.SetActionAllowedOn(tx, testUserAllowed, "test", testResourceA, false)
-
 		Convey("AllowsAction()   should return true  with bypassFunc giving false", func() {
 			allowed, err := aclWithBypassFalse.AllowsAction(tx, testUserAllowed, "test")
 			So(err, ShouldBeNil)
@@ -353,9 +340,6 @@ func TestAcl(t *testing.T) {
 			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, false)
 		})
-
-		aclWithBypassFalse.SetActionAllowed(tx, testUserAllowed, "test", true)
-		aclWithBypassFalse.SetActionAllowedOn(tx, testUserAllowed, "test", testResourceA, false)
 
 		Convey("AllowsAction()   should return true  with bypassFunc giving true", func() {
 			allowed, err := aclWithBypassTrue.AllowsAction(tx, testUserAllowed, "test")
@@ -386,9 +370,6 @@ func TestAcl(t *testing.T) {
 			So(allowed, ShouldEqual, true)
 		})
 
-		aclWithBypassFalse.SetActionAllowed(tx, testUserAllowed, "test", false)
-		aclWithBypassFalse.SetActionAllowedOn(tx, testUserAllowed, "test", testResourceA, true)
-
 		Convey("AllowsAction()   should return false with bypassFunc giving false", func() {
 			allowed, err := aclWithBypassFalse.AllowsAction(tx, testUserAllowed, "test")
 			So(err, ShouldBeNil)
@@ -400,9 +381,6 @@ func TestAcl(t *testing.T) {
 			So(err, ShouldBeNil)
 			So(allowed, ShouldEqual, true)
 		})
-
-		aclWithBypassFalse.SetActionAllowed(tx, testUserAllowed, "test", false)
-		aclWithBypassFalse.SetActionAllowedOn(tx, testUserAllowed, "test", testResourceA, true)
 
 		Convey("AllowsAction()   should return true  with bypassFunc giving true", func() {
 			allowed, err := aclWithBypassTrue.AllowsAction(tx, testUserAllowed, "test")
