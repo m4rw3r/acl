@@ -205,7 +205,7 @@ func ruleExists(t *sql.Tx, tableName string, ruleName string) (bool, error) {
 
 func ensureTreeLinks(t *sql.Tx, treeTable string, links []Link) error {
 	for _, link := range links {
-		exists, err := ruleExists(t, treeTable, fmt.Sprintf("%s_%s_DELETED_REMOVE_PRIMARY", treeTable, link.Table))
+		exists, err := ruleExists(t, link.Table, fmt.Sprintf("%s_%s_DELETED_REMOVE_PRIMARY", treeTable, link.Table))
 		if err != nil {
 			return err
 		}
@@ -225,7 +225,7 @@ func ensureTreeLinks(t *sql.Tx, treeTable string, links []Link) error {
 
 func ensureLinks(t *sql.Tx, tableName string, links []Link, linkType string, linkColumn string) error {
 	for _, link := range links {
-		exists, err := ruleExists(t, tableName, fmt.Sprintf("%s_%s_%s_DELETED", tableName, linkType, link.Table))
+		exists, err := ruleExists(t, link.Table, fmt.Sprintf("%s_%s_%s_DELETED", tableName, linkType, link.Table))
 		if err != nil {
 			return err
 		}
